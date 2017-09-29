@@ -94,5 +94,5 @@ function scavenger(
     o::Real,
     sizehint::Integer = 300
 )
-return scavenge_cache(CachingDynamicTs(y, f, o, sizehint, false))
+    return scavenge_cache(CachingDynamicTs(y, f, o, sizehint, false))
 end

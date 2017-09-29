@@ -43,4 +43,17 @@ using Base.Test
         ax[:set_ylim](ylimits)
         plt[:show]()
     end
+
+    @testset "spectrogram" begin
+        ds = DynamicSpectrogram(A, fs)
+        downsamp_req(ds, 0, 1, 10)
+        cb = GLPlotting.make_spec_cb(ds, [0, 10])
+        cb(0.0, 99.99, 503.0)
+        cb2 = GLPlotting.make_spec_cb(A, fs)
+        cb2(0, 1, 10)
+        (fig, ax) = subplots()
+        const B = sin.(2 * pi * 10 .* (1:npt) ./ fs) .+ 0.1 .* randn(npt)
+        resizeable_spectrogram(ax, B, fs)
+        plt[:show]()
+    end
 end
