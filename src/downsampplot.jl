@@ -73,13 +73,17 @@ function downsamp_patch(
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, I},
     plotlines::Vector{PyObject},
-    plotpatch::PyObject
+    plotpatch::PyObject,
+    listen_ax::Vector{PyObject} = [ax]
 ) where I <: Real
     ax[:set_autoscale_on](false)
     artists = push!(plotlines, plotpatch)
-    rartist = prp[:ResizeablePatch](cb, artists, xbounds, ybounds) # graph objects must be vector
-    ax[:callbacks][:connect]("xlim_changed", rartist[:update])
-    ax[:callbacks][:connect]("ylim_changed", rartist[:update])
+    rartist = prp[:ResizeablePatch](ax, cb, artists, xbounds, ybounds) # graph objects must be vector
+    println(listen_ax)
+    for lax in listen_ax
+        lax[:callbacks][:connect]("xlim_changed", rartist[:update])
+        lax[:callbacks][:connect]("ylim_changed", rartist[:update])
+    end
     return rartist
 end
 function downsamp_patch(
@@ -87,23 +91,25 @@ function downsamp_patch(
     cb::Function,
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, I},
+    listen_ax::Vector{PyObject} = [ax],
     plotargs...;
     plotkwargs...
 ) where I <: Real
     plotlines = make_dummy_line(2, ax, plotargs...; plotkwargs...)
     plotpatch = make_fill(ax, plotlines...)
-    return downsamp_patch(ax, cb, xbounds, ybounds, plotlines, plotpatch)
+    return downsamp_patch(ax, cb, xbounds, ybounds, plotlines, plotpatch, listen_ax)
 end
 function downsamp_patch(
     ax::PyObject,
     a::AbstractVector,
     fs::Real,
     offset::Real = 0,
+    listen_ax::Vector{PyObject} = [ax],
     args...;
     kwargs...
 )
     cb = make_cb(a, fs, offset)
     xbounds = duration(a, fs, offset)
     ybounds = extrema(a)
-    downsamp_patch(ax, cb, xbounds, ybounds, args...; kwargs...)
+    downsamp_patch(ax, cb, xbounds, ybounds, listen_ax, args...; kwargs...)
 end

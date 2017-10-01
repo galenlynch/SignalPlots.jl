@@ -54,6 +54,7 @@ using Base.Test
         (fig, ax) = subplots()
         const B = sin.(2 * pi * 10 .* (1:npt) ./ fs) .+ 0.1 .* randn(npt)
         resizeable_spectrogram(ax, B, fs)
+        ax[:set_xlim]([0, 100])
         plt[:show]()
     end
 end
