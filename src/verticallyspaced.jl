@@ -32,7 +32,7 @@ function plot_vertical_spacing(
     mappedybounds = map((x, y) -> map((z) -> z + y, x), ybounds, y_offsets)
     Ys = mappedarray.(transforms, As)
     dts = CachingDynamicTs.(Ys, fss, offsets)
-    patchartists = plot_multi_patch(ax, cbs, xbounds, mappedybounds, listen_ax)
+    patchartists = plot_multi_patch(ax, dts, xbounds, mappedybounds, listen_ax)
     min_x = mapreduce((x) -> x[1], min, Inf, xbounds)
     max_x = mapreduce((x) -> x[2], max, -Inf, xbounds)
     min_y = mappedybounds[1][1] - y_spacing * 0.1

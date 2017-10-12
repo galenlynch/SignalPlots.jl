@@ -1,7 +1,7 @@
 julia 0.6
-PyCall
-PyPlot
-GLUtilities
-GLTimeseries
+PyCall 1.11.0
+PyPlot 2.0.0
+GLUtilities 0.0.3
+GLTimeseries 0.0.2
 MappedArrays
-DSP
+DSP 0.2.0

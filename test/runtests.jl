@@ -38,7 +38,7 @@ using Base.Test
         B = fill(A, fillshape)
         fss = fill(fs, fillshape)
         (fig, ax) = subplots()
-        (artists, xlimits, ylimits, dts, cbs) = plot_vertical_spacing(ax, B, fss)
+        (artists, xlimits, ylimits) = plot_vertical_spacing(ax, B, fss)
         ax[:set_xlim](xlimits)
         ax[:set_ylim](ylimits)
         plt[:show]()
