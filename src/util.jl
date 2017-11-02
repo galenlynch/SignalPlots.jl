@@ -12,11 +12,17 @@ function plot_spacing(
 end
 
 function plot_offsets(
-    n_line::Number,
-    spacing::Number,
-    offset::Number = 0
-)
-    return spacing * (0:(n_line - 1)) + offset
+    n_line::Integer,
+    spacing::A,
+    offset::B = A(0)
+) where {A<:Number, B<:Number}
+    T = promote_type(A, B)
+    if spacing == 0
+        out = fill(T(offset), n_line)
+    else
+        out = Vector{T}(spacing * (0:(n_line - 1)) + offset)
+    end
+    return out
 end
 function plot_offsets(
     series::A,
