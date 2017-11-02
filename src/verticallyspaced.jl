@@ -27,7 +27,7 @@ function plot_vertical_spacing(
     y_offsets = plot_offsets(na, y_spacing)
     transforms = Vector{Function}(na)
     for (i, offset) in enumerate(y_offsets)
-        transforms[i] = (x) -> x + y_offsets[i]
+        transforms[i] = (y) -> y + y_offsets[i]
     end
     mappedybounds = map((x, y) -> map((z) -> z + y, x), ybounds, y_offsets)
     Ys = mappedarray.(transforms, As)
