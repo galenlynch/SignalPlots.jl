@@ -10,7 +10,8 @@ function plot_vertical_spacing(
     As::A,
     fss::AbstractVector,
     offsets::AbstractVector = [],
-    listen_ax::Vector{PyObject} = [ax]
+    listen_ax::Vector{PyObject} = [ax];
+    y_spacing::Real = -1
 ) where {E<:AbstractVector, A<:AbstractVector{E}}
     na = length(As)
     if isempty(offsets)
@@ -19,10 +20,12 @@ function plot_vertical_spacing(
     xbounds = duration.(As, fss, offsets)
     ybounds = extrema.(As)
     extents = map((x) -> x[2] - x[1], ybounds)
-    if na > 1
-        y_spacing = plot_spacing(extents)
-    else
-        y_spacing = 0
+    if y_spacing < 0
+        if na > 1
+            y_spacing = plot_spacing(extents)
+        else
+            y_spacing = 0
+        end
     end
     y_offsets = plot_offsets(na, y_spacing)
     transforms = Vector{Function}(na)
@@ -41,11 +44,13 @@ function plot_vertical_spacing(
     multi_ylim = [min_y, max_y]
     return (patchartists, multi_xlim, multi_ylim)
 end
+
 # Version for downsampler input
 function plot_vertical_spacing(
     ax::PyObject,
     ts::A,
-    listen_ax::Vector{PyObject} = [ax]
+    listen_ax::Vector{PyObject} = [ax];
+    y_spacing::Real = -1
 ) where {E<:DynamicDownsampler, A<:AbstractVector{E}}
     nts = length(ts)
     y_transforms = Vector{Function}(nts)
@@ -58,10 +63,12 @@ function plot_vertical_spacing(
         mappedybounds[i] = ys[1]
         extents[i] = mappedybounds[i][2] - mappedybounds[i][1]
     end
-    if nts > 1
-        y_spacing = plot_spacing(extents)
-    else
-        y_spacing = 0
+    if y_spacing < 0
+        if nts > 1
+            y_spacing = plot_spacing(extents)
+        else
+            y_spacing = 0
+        end
     end
     y_offsets = plot_offsets(nts, y_spacing)
     for (i, offset) in enumerate(y_offsets)
