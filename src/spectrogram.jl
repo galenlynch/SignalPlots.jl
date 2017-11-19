@@ -69,7 +69,8 @@ function resizeable_spectrogram(
     cb::Function,
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, J},
-    listen_ax::Vector{PyObject} = [ax]
+    listen_ax::Vector{PyObject} = [ax];
+    cmap::AbstractString = "viridis"
 ) where {I <: Real, J <: Real}
     ax[:set_autoscale_on](false)
     artist = ax[:imshow](
@@ -77,7 +78,7 @@ function resizeable_spectrogram(
         aspect = "auto",
         interpolation = "nearest",
         origin = "lower",
-        cmap = "viridis"
+        cmap = cmap
     )
     rartist = prp[:ResizeableImage](ax, cb, artist, xbounds, ybounds) # graph objects must be vector
     for lax in listen_ax
@@ -93,7 +94,8 @@ function resizeable_spectrogram(
     listen_ax::Vector{PyObject} = [ax];
     frange::AbstractVector = [],
     clim::AbstractVector = [],
-    window::Array{Float64} = hanning(512)
+    window::Array{Float64} = hanning(512),
+    cmap::AbstractString = "viridis"
 )
     cb = make_spec_cb(a - mean(a), fs, offset, frange, clim, window)
     xbounds = duration(a, fs, offset)
@@ -104,5 +106,5 @@ function resizeable_spectrogram(
         @assert length(frange) == 2 && frange[1] <= frange[2] "invalid frange"
         ybounds = (frange[1], frange[2])
     end
-    return resizeable_spectrogram(ax, cb, xbounds, ybounds, listen_ax)
+    return resizeable_spectrogram(ax, cb, xbounds, ybounds, listen_ax; cmap = cmap)
 end
