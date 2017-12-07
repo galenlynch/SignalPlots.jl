@@ -1,14 +1,21 @@
+# functions for making downsampling plot obejcts
+
+## make_dummy_line
+
 "Make a line with place-holder data"
 function make_dummy_line end
+
 function make_dummy_line(ax::PyObject, plotargs...; plotkwargs...)
     return ax[:plot](0, 0, plotargs...; plotkwargs...)[1]
 end
+
 "Make a line using the plot properties of an existing line"
-function make_dummy_line(ax::PyObject, l::PyObject, args...; kwargs...)
-    lineout = make_dummy_line(ax, args...; kwargs...)
+function make_dummy_line(ax::PyObject, l::PyObject)
+    lineout = make_dummy_line(ax)
     lineout[:update_from](l)
     return lineout
 end
+
 "Make multiple lines"
 function make_dummy_line(n::Integer, ax::PyObject, args...; kwargs...)
     plots = Vector{PyObject}(n)
@@ -17,7 +24,7 @@ function make_dummy_line(n::Integer, ax::PyObject, args...; kwargs...)
     end
     if n > 1
         for i in 2:n
-            plots[i] = make_dummy_line(ax, plots[1], args..., kwargs...)
+            plots[i] = make_dummy_line(ax, plots[1])
         end
     end
     return plots
@@ -135,26 +142,28 @@ function plot_multi_patch(
     cbs::Vector{Function},
     xbs::Vector{NTuple{2, I}},
     ybs::Vector{NTuple{2, J}},
-    listen_ax::Vector{PyObject} = [ax]
+    listen_ax::Vector{PyObject} = [ax];
+    plotkwargs...
 ) where {I<:Real, J<:Real}
     na = length(cbs)
     indicies = mod.(0:(na - 1), 10) # for Python consumption, base zero
     colorargs = ["C$n" for n in indicies]
     patchartists = Vector{PyObject}(na)
     for i in 1:na
-        patchartists[i] = downsamp_patch(ax, cbs[i], xbs[i], ybs[i], listen_ax, colorargs[i])
+        patchartists[i] = downsamp_patch(ax, cbs[i], xbs[i], ybs[i], listen_ax, colorargs[i]; plotkwargs...)
     end
     return patchartists
 end
 function plot_multi_patch(
     ax::PyObject,
     dts::A,
-    args...
+    args...;
+    kwargs...
 ) where {D <: DynamicDownsampler, A<:AbstractVector{D}}
     cbs = Array{Function}(length(dts))
     for (i, dt) in enumerate(dts)
         cbs[i] = make_cb(dt)
         cbs[i](0, 0, 10)
     end
-    plot_multi_patch(ax, cbs, args...)
+    plot_multi_patch(ax, cbs, args...; kwargs...)
 end

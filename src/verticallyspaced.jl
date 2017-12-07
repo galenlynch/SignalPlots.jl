@@ -11,7 +11,8 @@ function plot_vertical_spacing(
     fss::AbstractVector,
     offsets::AbstractVector = [],
     listen_ax::Vector{PyObject} = [ax];
-    y_spacing::Real = -1
+    y_spacing::Real = -1,
+    linewidth::Number = 2
 ) where {E<:AbstractVector, A<:AbstractVector{E}}
     na = length(As)
     if isempty(offsets)
@@ -35,7 +36,7 @@ function plot_vertical_spacing(
     mappedybounds = map((x, y) -> map((z) -> z + y, x), ybounds, y_offsets)
     Ys = mappedarray.(transforms, As)
     dts = CachingDynamicTs.(Ys, fss, offsets)
-    patchartists = plot_multi_patch(ax, dts, xbounds, mappedybounds, listen_ax)
+    patchartists = plot_multi_patch(ax, dts, xbounds, mappedybounds, listen_ax; linewidth = linewidth)
     min_x = mapreduce((x) -> x[1], min, Inf, xbounds)
     max_x = mapreduce((x) -> x[2], max, -Inf, xbounds)
     min_y = mappedybounds[1][1] - y_spacing * 0.1
@@ -50,7 +51,8 @@ function plot_vertical_spacing(
     ax::PyObject,
     ts::A,
     listen_ax::Vector{PyObject} = [ax];
-    y_spacing::Real = -1
+    y_spacing::Real = -1,
+    linewidth::Number = 2
 ) where {E<:DynamicDownsampler, A<:AbstractVector{E}}
     nts = length(ts)
     y_transforms = Vector{Function}(nts)
@@ -77,7 +79,7 @@ function plot_vertical_spacing(
         mappedybounds[i] = (mappedybounds[i][1] + thisoffset, mappedybounds[i][2] + thisoffset)
     end
     mts = MappedDynamicDownsampler.(ts, y_transforms)
-    patchartists = plot_multi_patch(ax, mts, xbounds, mappedybounds, listen_ax)
+    patchartists = plot_multi_patch(ax, mts, xbounds, mappedybounds, listen_ax; linewidth = linewidth)
     min_y = mappedybounds[1][1] - y_spacing * 0.1
     max_y = mappedybounds[end][2] + y_spacing * 0.1
     global_y = [min_y, max_y]
