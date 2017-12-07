@@ -1,5 +1,5 @@
 "Base type for resizeable artists, must implement a setdata method and have a baseinfo field"
-abstract type ResizeableArtists end
+abstract type ResizeableArtist end
 
 mutable struct RABaseInfo
     ax::PyObject
@@ -26,7 +26,7 @@ end
 
 ratiodiff(a, b) = abs(a - b) / (b + eps)
 
-function get_ax_pix_size(ax::PyObject)
+function ax_pix_size(ax::PyObject)
     fig = ax[:figure]
     scale = fig[:dpi_scale_trans][:inverted]()
     bbox = ax[:get_window_extent]()[:transformed](scale)
@@ -40,24 +40,61 @@ function get_ax_pix_size(ax::PyObject)
     return (pixwidth, pixheight)
 end
 
-function update(ra::ResizeableArtists, notifying_ax::PyObject)
-    otherlims = notifying_ax[:viewLim]
-    (xstart, xend) = otherlims[:intervalx]::Vector{Float64}
-    baseinfo = ra.baseinfo::RABaseInfo
-    ownlims = baseinfo.ax[:viewLim]
-    (ystart, yend) = ownlims[:intervaly]::Vector{Float64}
+function axis_limits(notifying_ax::PyObject, artist_ax::PyObject)
+    lims_notifying = notifying_ax[:viewLim]
+    (xstart, xend) = lims_notifying[:intervalx]::Vector{Float64}
+    lims_artist = artist_ax[:viewLim]
+    (ystart, yend) = lims_artist[:intervaly]::Vector{Float64}
+    return (xstart, xend, ystart, yend)
+end
+axis_limits(ax::PyObject) = axis_limits(ax, ax)
+
+function artist_is_visible(ra::ResizeableArtist, xstart, xend, ystart, yend)
     xoverlap = check_overlap(xstart, xend, baseinfo.datalimx[1], baseinfo.datalimx[2])
     yoverlap = check_overlap(ystart, yend, baseinfo.datalimy[1], baseinfo.datalimy[2])
-    if xoverlap && yoverlap
-        limwidth = xend - xstart
-        width_rd = ratiodiff(limwidth, baseinfo.lastlimwidth)
-        limcenter = (xend + xstart) / 2
-        center_rd = ratiodiff(limcenter, baseinfo.lastlimcenter)
-        if max(width_rd, center_rd) > baseinfo.threshdiff
-            baseinfo.lastlimwidth = limwidth
-            baseinfo.lastlimcenter = limcenter
-            (pixwidth, pixheight) = get_ax_pix_size(notifying_ax)
+    return xoverlap && yoverlap
+end
 
+function artist_should_redraw(ra::ResizeableArtist, limwidth, limcenter)
+    width_rd = ratiodiff(limwidth, ra.baseinfo.lastlimwidth)
+    center_rd = ratiodiff(limcenter, ra.baseinfo.lastlimcenter)
+    return max(width_rd, center_rd) > ra.baseinfo.threshdiff
+end
+
+function axis_xlim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
+    (xstart, xend, ystart, yend) = axis_limits(notifying_ax, ra.baseinfo.ax)
+    if artist_is_visible(ra, xstart, xend, ystart, yend)
+        limwidth = xend - xstart
+        limcenter = (xend + xstart) / 2
+        if artist_should_redraw(ra, limwidth, limcenter)
+            ra.baseinfo.lastlimwidth = limwidth
+            ra.baseinfo.lastlimcenter = limcenter
+            (pixwidth, pixheight) = ax_pix_size(notifying_ax)
+            update_plotdata(ra, xstart, xend, pixwidth)
+            ra.baseinfo.ax[:figure][:canvas][:draw_idle]()
+
+        end
     end
 end
-w
+
+struct ResizeablePatch <: ResizeableArtist
+    baseinfo::RABaseInfo
+    patch::PyObject
+    dts::CachingDynamicTs
+end
+
+function poly_points(xs, ys, stepwidth)
+    nx = length(xs)
+    npt = 4 * nx
+    pts = Array{Float64, 2}(npt, 2)
+    for i in eachindex(xs)
+        # make a horizontal line for each point
+    end
+end
+
+function update_plotdata(ra::ResizeablePatch, xstart, xend, pixwidth)
+    (xs, ys) = downsamp_req(ra.dts, xstart, xend, pixwidth)
+    stepwidth = (xend - xstart) / pixwidth
+    (xpt, ypt) = poly_points(xs, ys, stepwidth)
+
+end
