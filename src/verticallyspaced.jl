@@ -59,7 +59,8 @@ function plot_vertical_spacing(
     ts::A,
     listen_ax::Vector{PyObject} = [ax];
     y_spacing::Real = -1,
-    linewidth::Number = 2
+    linewidth::Number = 2,
+    toplevel = true
 ) where {E<:DynamicDownsampler, A<:AbstractVector{E}}
     nts = length(ts)
     y_transforms = Vector{Function}(nts)
@@ -85,15 +86,22 @@ function plot_vertical_spacing(
     for (i, offset) in enumerate(y_offsets)
         thisoffset = y_offsets[i]
         y_transforms[i] = make_shifter(thisoffset)
-        mappedybounds[i] = (mappedybounds[i][1] + thisoffset, mappedybounds[i][2] + thisoffset)
+        mappedybounds[i] = (
+            mappedybounds[i][1] + thisoffset,
+            mappedybounds[i][2] + thisoffset
+        )
     end
     mts = MappedDynamicDownsampler.(ts, y_transforms)
-    patchartists = plot_multi_patch(ax, mts, xbounds, mappedybounds, listen_ax; linewidth = linewidth)
-    min_y = mappedybounds[1][1] - y_spacing * 0.1
-    max_y = mappedybounds[end][2] + y_spacing * 0.1
-    global_y = [min_y, max_y]
-    global_x = reduce(reduce_extrema, (Inf, -Inf), xbounds)
-    global_x = [global_x...]
-    return (patchartists, global_x, global_y)
+    (patchartists, x_bounds, y_bounds) = plot_multi_patch(
+        ax, mts, xbounds, mappedybounds, listen_ax;
+        linewidth = linewidth, toplevel = false
+    )
+    y_expansion = y_spacing * 0.1
+    expanded_ybounds = (global_y[1] - y_expansion, global_y[2] + y_expansion)
+    if toplevel
+        ax[:set_ylim]([expanded_ybounds...])
+        ax[:set_xlim]([x_bounds...])
+    end
+    return (patchartists, x_bounds, expanded_ybounds)
 end
 

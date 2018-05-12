@@ -1,62 +1,3 @@
-function clipval(a::AbstractArray, c::NTuple{2, R}) where {R<:Number}
-    a[a.<c[1]] = c[1]
-    a[a.>c[2]] = c[2]
-end
-
-noop(args...;kwargs...) = nothing
-p2db(a::Number) = 10 * log10(a)
-
-"""
-    make_spec_cb
-
-Create a closure of the form f(xb, xe, npt) -> (s, f, t, cl)
-
-This callback can be called from python without using the DynamicSpectrogram
-object.
-"""
-function make_spec_cb(
-    ds::DynamicSpectrogram,
-    clim::AbstractVector = [],
-    frange::AbstractVector = [],
-)
-    nfr = length(frange)
-    clipfun = isempty(clim) ? noop : (x) -> clipval(x, (clim[1], clim[2]))
-    if nfr == 0
-        cb = (xb, xe, npt) -> begin
-            (t, (f, s), was_downsamped) = downsamp_req(ds, xb, xe, npt)
-            times = collect(t)
-            db = p2db.(s)
-            clipfun(db)
-            return (db, f, times, clim)
-        end
-    elseif nfr == 2 && frange[1] <= frange[2]
-        cb = (xb, xe, npt) -> begin
-            (t, (f, s), was_downsamped) = downsamp_req(ds, xb, xe, npt)
-            fmask = frange[1] .<= f .<= frange[2]
-            clip_f = f[fmask]
-            clip_s = s[fmask, :]
-            db = p2db.(clip_s)
-            clipfun(db)
-            times = collect(t)
-            return (db, clip_f, times, clim)
-        end
-    else
-        error("invalid frange")
-    end
-    return cb
-end
-function make_spec_cb(
-    a::AbstractVector,
-    fs::Real,
-    offset::Real = 0,
-    frange::AbstractVector = [],
-    clim::AbstractVector = [],
-    window::Vector{Float64} = hanning(512)
-)
-    dts = DynamicSpectrogram(a, fs, offset, window)
-    return make_spec_cb(dts, clim, frange)
-end
-
 """
     resizeable_spectrogram
 
@@ -66,24 +7,26 @@ function resizeable_spectrogram end
 
 function resizeable_spectrogram(
     ax::PyObject,
-    cb::Function,
+    ds::DynamicSpectrogram,
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, J},
     listen_ax::Vector{PyObject} = [ax];
-    cmap::AbstractString = "viridis"
+    clim::AbstractVector = [],
+    frange::AbstractVector = [],
+    cmap::AbstractString = "viridis",
+    toplevel::Bool = true
 ) where {I <: Real, J <: Real}
-    ax[:set_autoscale_on](false)
-    artist = ax[:imshow](
-        zeros(1,1);
-        aspect = "auto",
-        interpolation = "nearest",
-        origin = "lower",
-        cmap = cmap
+    rartist = ResizeableSpec(
+        ds, ax, Vector{PyObject}(), xbounds, ybounds;
+        clim = clim, frange = frange
     )
-    rartist = prp[:ResizeableImage](ax, cb, artist, xbounds, ybounds) # graph objects must be vector
+    ax[:set_autoscale_on](false)
+    toplevel && set_ax_home(rartist)
+    update_fnc = (a) -> axis_lim_changed(rartist, a)
     for lax in listen_ax
-        lax[:callbacks][:connect]("xlim_changed", rartist[:update])
+        lax[:callbacks][:connect]("xlim_changed", update_fnc)
     end
+    update_fnc(ax)
     return rartist
 end
 function resizeable_spectrogram(
@@ -91,13 +34,12 @@ function resizeable_spectrogram(
     a::AbstractVector,
     fs::Real,
     offset::Real = 0,
-    listen_ax::Vector{PyObject} = [ax];
+    args...;
     frange::AbstractVector = [],
-    clim::AbstractVector = [],
     window::Array{Float64} = hanning(512),
-    cmap::AbstractString = "viridis"
+    kwargs...
 )
-    cb = make_spec_cb(a - mean(a), fs, offset, frange, clim, window)
+    ds = DynamicSpectrogram(a, fs, offset, window)
     xbounds = duration(a, fs, offset)
     if isempty(frange)
         freqs = rfftfreq(length(window), fs)
@@ -106,5 +48,102 @@ function resizeable_spectrogram(
         @assert length(frange) == 2 && frange[1] <= frange[2] "invalid frange"
         ybounds = (frange[1], frange[2])
     end
-    return resizeable_spectrogram(ax, cb, xbounds, ybounds, listen_ax; cmap = cmap)
+    return resizeable_spectrogram(
+        ax, ds, xbounds, ybounds, args...;
+        frange = frange, kwargs...
+    )
+end
+
+struct ResizeableSpec{T<:DynamicSpectrogram} <: ResizeableArtist
+    ds::T
+    clim::Vector{Float64}
+    frange::Vector{Float64}
+    baseinfo::RABaseInfo
+    function ResizeableSpec{T}(
+        ds::T,
+        clim::Vector{Float64},
+        frange::Vector{Float64},
+        baseinfo::RABaseInfo
+    ) where {T<:DynamicSpectrogram}
+        nfr = length(frange)
+        if ! empty_or_ordered_bound(frange)
+            error("frange must be empty or be bounds")
+        end
+        if ! empty_or_ordered_bound(clim)
+            error("clim must be empty or be bounds")
+        end
+        return new(ds, clim, frange, baseinfo)
+    end
+end
+function ResizeableSpec(
+    ds::T,
+    clim::Vector{Float64},
+    frange::Vector{Float64},
+    args...;
+) where {T<:DynamicSpectrogram}
+    return ResizeableSpec{T}(ds, clim, frange, RABaseInfo(args...))
+end
+function ResizeableSpec(
+    ds::DynamicSpectrogram, args...;
+    clim::AbstractVector = [],
+    frange::AbstractVector = []
+)
+    return ResizeableSpec(
+        ds,
+        convert(Vector{Float64}, clim),
+        convert(Vector{Float64}, frange),
+        args...
+    )
+end
+
+function update_plotdata(ra::ResizeableSpec, xstart, xend, pixwidth)
+    (t, (f, s), was_downsamped) = downsamp_req(ra.ds, xstart, xend, pixwidth)
+    (db, f_start, f_end) = process_spec_data(ra, f, s)
+
+    if ! isempty(ra.baseinfo.artists)
+        ra.baseinfo.artists[1][:remove]()
+        pop!(ra.baseinfo.artists)
+    end
+
+    imartist = ra.baseinfo.ax[:imshow](
+        db;
+        cmap = "viridis",
+        extent = [t[1], t[end], f_start, f_end],
+        interpolation = "nearest",
+        origin = "lower",
+        aspect = "auto"
+    )
+    push!(ra.baseinfo.artists, imartist)
+end
+
+function process_spec_data(ra::ResizeableSpec, f, s)
+    if isempty(ra.frange)
+        f_start = f[1]
+        f_end = f[end]
+        sel_s = s
+    else
+        f_start_i = searchsortedfirst(f, ra.frange[1])
+        f_end_i = searchsortedlast(f, ra.frange[2])
+        f_start = f[f_start_i]
+        f_end = f[f_end_i]
+        sel_s = view(s, f_start_i:f_end_i, 1:length(s))
+    end
+    db = p2db.(sel_s)
+    if !isempty(ra.clim)
+        clipval!(db, (ra.clim[1], ra.clim[2]))
+    end
+return (db, f_start, f_end)
+end
+
+function clipval!(a::AbstractArray, c::NTuple{2, R}) where {R<:Number}
+    a[a.<c[1]] = c[1]
+    a[a.>c[2]] = c[2]
+end
+
+noop(args...;kwargs...) = nothing
+p2db(a::Number) = 10 * log10(a)
+
+function empty_or_ordered_bound(a::AbstractArray)
+    na = length(a)
+    return na == 0 || (na == 2 && a[1] <= a[2])
 end

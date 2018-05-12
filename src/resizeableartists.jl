@@ -37,6 +37,11 @@ function RABaseInfo(ax::PyObject, artist::PyObject, args...)
     return RABaseInfo(ax, [artist], args...)
 end
 
+function set_ax_home(a::ResizeableArtist)
+    a.baseinfo.ax[:set_ylim]([a.baseinfo.datalimy...])
+    a.baseinfo.ax[:set_xlim]([a.baseinfo.datalimx...])
+end
+
 ratiodiff(a, b) = abs(a - b) / (b + eps(b))
 
 function ax_pix_size(ax::PyObject)
@@ -78,7 +83,7 @@ function artist_should_redraw(ra::ResizeableArtist, limwidth, limcenter)
     return max(width_rd, center_rd) > ra.baseinfo.threshdiff
 end
 
-function axis_xlim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
+function axis_lim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
     (xstart, xend, ystart, yend) = axis_limits(notifying_ax, ra.baseinfo.ax)
     if artist_is_visible(ra, xstart, xend, ystart, yend)
         limwidth = xend - xstart
@@ -91,39 +96,4 @@ function axis_xlim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
             ra.baseinfo.ax[:figure][:canvas][:draw_idle]()
         end
     end
-end
-
-struct ResizeablePatch{T<:DynamicDownsampler} <: ResizeableArtist
-    baseinfo::RABaseInfo
-    dts::T
-end
-function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
-    return ResizeablePatch(RABaseInfo(args...; kwargs...), dts)
-end
-
-function fill_points(xs, ys, was_downsampled)
-    if was_downsampled
-        npt = 2 * length(xs)
-        xpts = Vector{Float64}(npt)
-        ypts = Vector{Float64}(npt)
-        for (x_i, x) in enumerate(xs) # Enumerate over input
-            # Calculate the corresponding position in the output
-            i = (x_i - 1) * 2 + 1
-            # First two points have the same x (vertical line)
-            xpts[i] = x
-            xpts[i + 1] = x
-            # These two points are the min and max y values
-            ypts[i] = ys[x_i][1]
-            ypts[i + 1] = ys[x_i][2]
-        end
-    else
-        xpts = Vector{Float64}(xs)
-        ypts = Float64[y[1] for y in ys]
-    end
-    return (xpts, ypts)
-end
-
-function update_plotdata(ra::ResizeablePatch, xstart, xend, pixwidth)
-    (xpt, ypt) = fill_points(downsamp_req(ra.dts, xstart, xend, pixwidth)...)
-    ra.baseinfo.artists[1][:set_data](xpt, ypt)
 end
