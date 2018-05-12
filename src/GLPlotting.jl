@@ -24,6 +24,7 @@ export
     resizeable_spectrogram
 
 include("util.jl")
+include("resizeableartists.jl")
 include("downsampplot.jl")
 include("verticallyspaced.jl")
 include("spectrogram.jl")

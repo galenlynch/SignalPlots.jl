@@ -1,4 +1,7 @@
-"Base type for resizeable artists, must implement a setdata method and have a baseinfo field"
+"""
+Base type for resizeable artists, must implement a setdata method and have a
+baseinfo field"
+"""
 abstract type ResizeableArtist end
 
 mutable struct RABaseInfo
@@ -9,22 +12,32 @@ mutable struct RABaseInfo
     threshdiff::Float64
     lastlimwidth::Float64
     lastlimcenter::Float64
-end
-function RABaseInfo(
-    ax,
-    artsts,
-    datalimx,
-    datalimy,
-    threshdiff = 0,
-    lastlimwidth = 0,
-    lastlimcenter = 0
+
+    function RABaseInfo(
+    ax::PyObject,
+    artists::Vector{PyObject},
+    datalimx::NTuple{2, Float64},
+    datalimy::NTuple{2, Float64},
+    threshdiff::Float64 = 0.0,
+    lastlimwidth::Float64 = 0.0,
+    lastlimcenter::Float64 = 0.0
 )
-    return RABaseInfo(
-        ax, artists, datalimx, datalimy, threshdiff, lastlimwidth, lastlimcenter
-    )
+        return new(
+            ax,
+            artists,
+            datalimx,
+            datalimy,
+            threshdiff,
+            lastlimwidth,
+            lastlimcenter
+        )
+    end
+end
+function RABaseInfo(ax::PyObject, artist::PyObject, args...)
+    return RABaseInfo(ax, [artist], args...)
 end
 
-ratiodiff(a, b) = abs(a - b) / (b + eps)
+ratiodiff(a, b) = abs(a - b) / (b + eps(b))
 
 function ax_pix_size(ax::PyObject)
     fig = ax[:figure]
@@ -50,8 +63,12 @@ end
 axis_limits(ax::PyObject) = axis_limits(ax, ax)
 
 function artist_is_visible(ra::ResizeableArtist, xstart, xend, ystart, yend)
-    xoverlap = check_overlap(xstart, xend, baseinfo.datalimx[1], baseinfo.datalimx[2])
-    yoverlap = check_overlap(ystart, yend, baseinfo.datalimy[1], baseinfo.datalimy[2])
+    xoverlap = check_overlap(
+        xstart, xend, ra.baseinfo.datalimx[1], ra.baseinfo.datalimx[2]
+    )
+    yoverlap = check_overlap(
+        ystart, yend, ra.baseinfo.datalimy[1], ra.baseinfo.datalimy[2]
+    )
     return xoverlap && yoverlap
 end
 
@@ -72,29 +89,41 @@ function axis_xlim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
             (pixwidth, pixheight) = ax_pix_size(notifying_ax)
             update_plotdata(ra, xstart, xend, pixwidth)
             ra.baseinfo.ax[:figure][:canvas][:draw_idle]()
-
         end
     end
 end
 
-struct ResizeablePatch <: ResizeableArtist
+struct ResizeablePatch{T<:DynamicDownsampler} <: ResizeableArtist
     baseinfo::RABaseInfo
-    patch::PyObject
-    dts::CachingDynamicTs
+    dts::T
+end
+function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
+    return ResizeablePatch(RABaseInfo(args...; kwargs...), dts)
 end
 
-function poly_points(xs, ys, stepwidth)
-    nx = length(xs)
-    npt = 4 * nx
-    pts = Array{Float64, 2}(npt, 2)
-    for i in eachindex(xs)
-        # make a horizontal line for each point
+function fill_points(xs, ys, was_downsampled)
+    if was_downsampled
+        npt = 2 * length(xs)
+        xpts = Vector{Float64}(npt)
+        ypts = Vector{Float64}(npt)
+        for (x_i, x) in enumerate(xs) # Enumerate over input
+            # Calculate the corresponding position in the output
+            i = (x_i - 1) * 2 + 1
+            # First two points have the same x (vertical line)
+            xpts[i] = x
+            xpts[i + 1] = x
+            # These two points are the min and max y values
+            ypts[i] = ys[x_i][1]
+            ypts[i + 1] = ys[x_i][2]
+        end
+    else
+        xpts = Vector{Float64}(xs)
+        ypts = Float64[y[1] for y in ys]
     end
+    return (xpts, ypts)
 end
 
 function update_plotdata(ra::ResizeablePatch, xstart, xend, pixwidth)
-    (xs, ys) = downsamp_req(ra.dts, xstart, xend, pixwidth)
-    stepwidth = (xend - xstart) / pixwidth
-    (xpt, ypt) = poly_points(xs, ys, stepwidth)
-
+    (xpt, ypt) = fill_points(downsamp_req(ra.dts, xstart, xend, pixwidth)...)
+    ra.baseinfo.artists[1][:set_data](xpt, ypt)
 end

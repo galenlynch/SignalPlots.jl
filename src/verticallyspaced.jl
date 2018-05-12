@@ -36,7 +36,14 @@ function plot_vertical_spacing(
     mappedybounds = map((x, y) -> map((z) -> z + y, x), ybounds, y_offsets)
     Ys = mappedarray.(transforms, As)
     dts = CachingDynamicTs.(Ys, fss, offsets)
-    patchartists = plot_multi_patch(ax, dts, xbounds, mappedybounds, listen_ax; linewidth = linewidth)
+    patchartists = plot_multi_patch(
+        ax,
+        dts,
+        xbounds,
+        mappedybounds,
+        listen_ax;
+        linewidth = linewidth
+    )
     min_x = mapreduce((x) -> x[1], min, Inf, xbounds)
     max_x = mapreduce((x) -> x[2], max, -Inf, xbounds)
     min_y = mappedybounds[1][1] - y_spacing * 0.1
@@ -61,7 +68,9 @@ function plot_vertical_spacing(
     xbounds = Vector{NTuple{2, Float64}}(nts)
     for i in 1:nts
         xbounds[i] = duration(ts[i])
-        (xs, ys) = downsamp_req(ts[i], xbounds[i][1], xbounds[i][2], 1)
+        (xs, ys, was_downsamped) = downsamp_req(
+            ts[i], xbounds[i][1], xbounds[i][2], 1
+        )
         mappedybounds[i] = ys[1]
         extents[i] = mappedybounds[i][2] - mappedybounds[i][1]
     end

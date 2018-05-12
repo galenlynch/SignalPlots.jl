@@ -23,7 +23,7 @@ function make_spec_cb(
     clipfun = isempty(clim) ? noop : (x) -> clipval(x, (clim[1], clim[2]))
     if nfr == 0
         cb = (xb, xe, npt) -> begin
-            (t, (f, s)) = downsamp_req(ds, xb, xe, npt)
+            (t, (f, s), was_downsamped) = downsamp_req(ds, xb, xe, npt)
             times = collect(t)
             db = p2db.(s)
             clipfun(db)
@@ -31,7 +31,7 @@ function make_spec_cb(
         end
     elseif nfr == 2 && frange[1] <= frange[2]
         cb = (xb, xe, npt) -> begin
-            (t, (f, s)) = downsamp_req(ds, xb, xe, npt)
+            (t, (f, s), was_downsamped) = downsamp_req(ds, xb, xe, npt)
             fmask = frange[1] .<= f .<= frange[2]
             clip_f = f[fmask]
             clip_s = s[fmask, :]

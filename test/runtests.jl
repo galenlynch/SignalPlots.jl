@@ -18,14 +18,28 @@ using Base.Test
     const npt = 10000
     const A = rand(npt)
     const fs = 100
+    const dts = CachingDynamicTs(A, fs)
+
+    @testset "resizeableartists" begin
+        const xs = [1, 2]
+        const ys = [(1, 2), (3, 4)]
+        const resx = [1, 1, 2, 2]
+        const resy = [1, 2, 3, 4]
+        @test GLPlotting.fill_points(xs, ys, true) == (resx, resy)
+        @test GLPlotting.fill_points(xs, ys, false) == (
+            [1, 2],
+            [1, 3]
+        )
+        ax = gca()
+        lineartist = GLPlotting.make_dummy_line(ax)
+        rabase = GLPlotting.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
+        rp = GLPlotting.ResizeablePatch(rabase, dts)
+        rp = GLPlotting.ResizeablePatch(dts, ax, lineartist, (0.0, 1.0), (0.0, 1.0))
+        GLPlotting.axis_xlim_changed(rp, ax)
+    end
 
     @testset "downsampplot" begin
-        dts = CachingDynamicTs(A, fs)
-        (xs, ys) = downsamp_req(dts, 0, 1, 10)
-        GLPlotting.to_patch_plot_coords(xs, ys)
-        cb = GLPlotting.make_cb(dts)
-        cb = GLPlotting.make_cb(A, fs)
-        cb(0, 1, 10)
+        (xs, ys, was_downsamped) = downsamp_req(dts, 0, 1, 10)
         (fig, ax) = subplots()
         downsamp_patch(ax, A, fs)
         ax[:set_xlim]([0, n_points_duration(npt, fs)])

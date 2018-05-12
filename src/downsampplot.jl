@@ -1,7 +1,5 @@
 # functions for making downsampling plot obejcts
 
-## make_dummy_line
-
 "Make a line with place-holder data"
 function make_dummy_line end
 
@@ -30,56 +28,6 @@ function make_dummy_line(n::Integer, ax::PyObject, args...; kwargs...)
     return plots
 end
 
-"Make a fill_between object from two lines"
-function make_fill(
-    ax::PyObject,
-    lowline::PyObject,
-    highline::PyObject,
-    match::Bool = true,
-    alpha::AbstractFloat = 0.5,
-    args...;
-    kwargs...
-)
-    (lowx, lowy) = lowline[:get_data]()
-    (highx, highy) = highline[:get_data]()
-    @assert lowx == highx "inputs lines must share the same x points"
-    p = ax[:fill_between](lowx, lowy, highy, args...; alpha = alpha, kwargs...)
-    if match
-        p[:set_facecolors](lowline[:get_color]())
-    end
-    return p
-end
-
-"group multiple vectors of y data with a common x for plotting"
-function to_patch_plot_coords(
-    xs::AbstractVector,
-    ys::A
-) where {E<:Real, N, S<:NTuple{N, E}, A<:AbstractVector{S}}
-    ny = length(ys)
-    outs = ntuple((i) -> (xs, Vector{E}(ny)), N)
-    for (y_ndx, y_group) in enumerate(ys)
-        for series_no in 1:N
-            outs[series_no][2][y_ndx] = y_group[series_no]
-        end
-    end
-    return outs
-end
-
-function make_cb(dts::DynamicDownsampler)
-    f = (xb, xe, ptmax) -> to_patch_plot_coords(downsamp_req(dts, xb, xe, ptmax)...)
-    return f::Function
-end
-function make_cb(
-    a::AbstractVector,
-    fs::Real,
-    offset::Real = 0,
-    sizehint::Integer = 1000
-)
-    dts = CachingDynamicTs(a, fs, offset, 1000)
-    dts = DynamicTs(a, fs, offset)
-    return make_cb(dts)
-end
-
 """
     downsamp_patch
 
@@ -87,34 +35,36 @@ Plot a signal as two lines and a fill_between polygon
 """
 function downsamp_patch(
     ax::PyObject,
-    cb::Function,
+    dts::DynamicDownsampler,
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, I},
-    plotlines::Vector{PyObject},
-    plotpatch::PyObject,
+    plotline::PyObject,
     listen_ax::Vector{PyObject} = [ax]
 ) where I <: Real
+    artists = [plotline]
+    rpatch = ResizeablePatch(dts, ax, artists, xbounds, ybounds)
     ax[:set_autoscale_on](false)
-    artists = push!(plotlines, plotpatch)
-    rartist = prp[:ResizeablePatch](ax, cb, artists, xbounds, ybounds) # graph objects must be vector
+    update_fnc = (x) -> axis_xlim_changed(rpatch, x)
     for lax in listen_ax
-        lax[:callbacks][:connect]("xlim_changed", rartist[:update])
-        lax[:callbacks][:connect]("ylim_changed", rartist[:update])
+        conn_fnc = lax[:callbacks][:connect]
+        conn_fnc("xlim_changed", update_fnc)
+        conn_fnc("ylim_changed", update_fnc) # TODO: Is this necessary?
     end
-    return rartist
+    ax[:set_xlim]([xbounds[1], xbounds[2]])
+    ax[:set_ylim]([ybounds[1], ybounds[2]])
+    return rpatch
 end
 function downsamp_patch(
     ax::PyObject,
-    cb::Function,
+    dts::DynamicDownsampler,
     xbounds::NTuple{2, I},
     ybounds::NTuple{2, I},
     listen_ax::Vector{PyObject} = [ax],
     plotargs...;
     plotkwargs...
 ) where I <: Real
-    plotlines = make_dummy_line(2, ax, plotargs...; plotkwargs...)
-    plotpatch = make_fill(ax, plotlines...)
-    return downsamp_patch(ax, cb, xbounds, ybounds, plotlines, plotpatch, listen_ax)
+    plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
+    return downsamp_patch(ax, dts, xbounds, ybounds, plotline, listen_ax)
 end
 function downsamp_patch(
     ax::PyObject,
@@ -125,12 +75,11 @@ function downsamp_patch(
     args...;
     kwargs...
 )
-    cb = make_cb(a, fs, offset)
+    dts = CachingDynamicTs(a, fs, offset, 1000)
     xbounds = duration(a, fs, offset)
     ybounds = extrema(a)
-    downsamp_patch(ax, cb, xbounds, ybounds, listen_ax, args...; kwargs...)
+    downsamp_patch(ax, dts, xbounds, ybounds, listen_ax, args...; kwargs...)
 end
-
 
 """
     plot_multi_patch
@@ -139,31 +88,31 @@ Plot a list of DownSampler objects
 """
 function plot_multi_patch(
     ax::PyObject,
-    cbs::Vector{Function},
-    xbs::Vector{NTuple{2, I}},
-    ybs::Vector{NTuple{2, J}},
+    dts::AbstractVector{<:DynamicDownsampler},
+    xbs::A,
+    ybs::B,
     listen_ax::Vector{PyObject} = [ax];
     plotkwargs...
-) where {I<:Real, J<:Real}
-    na = length(cbs)
+) where {
+    S<:NTuple{2, <:Real},
+    A<:AbstractArray{S},
+    T<:NTuple{2, <:Real},
+    B<:AbstractArray{T}
+}
+    na = length(dts)
     indicies = mod.(0:(na - 1), 10) # for Python consumption, base zero
     colorargs = ["C$n" for n in indicies]
     patchartists = Vector{PyObject}(na)
     for i in 1:na
-        patchartists[i] = downsamp_patch(ax, cbs[i], xbs[i], ybs[i], listen_ax, colorargs[i]; plotkwargs...)
+        patchartists[i] = downsamp_patch(
+            ax,
+            dts[i],
+            xbs[i],
+            ybs[i],
+            listen_ax,
+            colorargs[i];
+            plotkwargs...
+        )
     end
     return patchartists
-end
-function plot_multi_patch(
-    ax::PyObject,
-    dts::A,
-    args...;
-    kwargs...
-) where {D <: DynamicDownsampler, A<:AbstractVector{D}}
-    cbs = Array{Function}(length(dts))
-    for (i, dt) in enumerate(dts)
-        cbs[i] = make_cb(dt)
-        cbs[i](0, 0, 10)
-    end
-    plot_multi_patch(ax, cbs, args...; kwargs...)
 end
