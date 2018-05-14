@@ -34,6 +34,7 @@ using Base.Test
         ax = gca()
         lineartist = GLPlotting.make_dummy_line(ax)
         rabase = GLPlotting.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
+        rabase = GLPlotting.RABaseInfo(ax, lineartist, (0, 1), (0.0, 1.0))
         rp = GLPlotting.ResizeablePatch(dts, rabase)
         rp = GLPlotting.ResizeablePatch(dts, ax, lineartist, (0.0, 1.0), (0.0, 1.0))
         GLPlotting.axis_lim_changed(rp, ax)
