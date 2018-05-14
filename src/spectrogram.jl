@@ -126,7 +126,7 @@ function process_spec_data(ra::ResizeableSpec, f, s)
         f_end_i = searchsortedlast(f, ra.frange[2])
         f_start = f[f_start_i]
         f_end = f[f_end_i]
-        sel_s = view(s, f_start_i:f_end_i, 1:length(s))
+        sel_s = view(s, f_start_i:f_end_i, 1:size(s, 2))
     end
     db = p2db.(sel_s)
     if !isempty(ra.clim)

@@ -19,6 +19,7 @@ using Base.Test
     const A = rand(npt)
     const fs = 100
     const dts = CachingDynamicTs(A, fs)
+    const ds = DynamicSpectrogram(A, fs)
 
     @testset "resizeableartists" begin
         const xs = [1, 2]
@@ -55,11 +56,18 @@ using Base.Test
     end
 
     @testset "spectrogram" begin
-        ds = DynamicSpectrogram(A, fs)
-        downsamp_req(ds, 0, 1, 10)
         (fig, ax) = subplots()
         const B = sin.(2 * pi * 10 .* (1:npt) ./ fs) .+ 0.1 .* randn(npt)
-        resizeable_spectrogram(ax, B, fs)
+        rspec = resizeable_spectrogram(ax, B, fs)
+        plt[:show]()
+        cla()
+        rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13])
+        colorbar(rspec.baseinfo.artists[1])
+        plt[:show]()
+        close(fig)
+        (fig, ax) = subplots()
+        rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13], clim = [-20, 0])
+        colorbar(rspec.baseinfo.artists[1])
         plt[:show]()
     end
 end
