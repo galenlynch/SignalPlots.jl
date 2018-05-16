@@ -5,9 +5,7 @@ using
     PyPlot,
     PyCall,
     GLTimeseries,
-    GLUtilities,
-    MappedArrays,
-    DSP
+    GLUtilities
 
 export
     # Functions

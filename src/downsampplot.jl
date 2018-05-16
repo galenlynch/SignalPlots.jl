@@ -23,40 +23,27 @@ Plot a list of DownSampler objects
 function plot_multi_patch(
     ax::PyObject,
     dts::AbstractVector{<:DynamicDownsampler},
-    xbs::A,
-    ybs::B,
     listen_ax::Vector{PyObject} = [ax];
     toplevel = true,
     plotkwargs...
-) where {
-    S<:NTuple{2, <:Real},
-    A<:AbstractArray{S},
-    T<:NTuple{2, <:Real},
-    B<:AbstractArray{T}
-}
+)
     na = length(dts)
     indicies = mod.(0:(na - 1), 10) # for Python consumption, base zero
     colorargs = ["C$n" for n in indicies]
     patchartists = Vector{ResizeablePatch}(na)
-    xbounds = Vector{NTuple{2, Float64}}(na)
-    ybounds = Vector{NTuple{2, Float64}}(na)
     for i in 1:na
-        patchartists[i] = downsamp_patch(
-            ax,
-            dts[i],
-            colorargs[i];
-            listen_ax = listen_ax,
-            toplevel = false,
-            plotkwargs...
-        )
+        patchartists[i] = downsamp_patch(ax, dts[i], colorargs[i]; plotkwargs...)
+        connect_callbacks(ax, patchartists[i], listen_ax; toplevel = toplevel)
     end
-    global_x = reduce(reduce_extrema, (Inf, -Inf), xbs)
-    global_y = reduce(reduce_extrema, (Inf, -Inf), ybs)
     if toplevel
+        xbs = xbounds.(patchartists)
+        ybs = ybounds.(patchartists)
+        global_x = extrema_red(xbs)
+        global_y = extrema_red(ybs)
         ax[:set_ylim]([global_y...])
         ax[:set_xlim]([global_x...])
     end
-    return (patchartists, global_x, global_y)
+    return patchartists
 end
 
 struct ResizeablePatch{T<:DynamicDownsampler} <: ResizeableArtist

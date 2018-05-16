@@ -111,10 +111,11 @@ function ResizeableSpec(
     args...;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
-    window::Array{Float64} = hanning(512),
+    window::Array{Float64} = Vector{Float64}(),
     cmap::AbstractString = "viridis"
 )
-    ds = DynamicSpectrogram(a, fs, offset, window)
+    extra_args = isempty(window) ? () : (window,)
+    ds = DynamicSpectrogram(a, fs, offset, extra_args...)
     return ResizeableSpec(ax, ds, clim, frange, cmap, args...)
 end
 

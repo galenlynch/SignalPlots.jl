@@ -52,11 +52,11 @@ using Base.Test
         B = fill(A, fillshape)
         fss = fill(fs, fillshape)
         (fig, ax) = subplots()
-        (artists, xlimits, ylimits) = plot_vertical_spacing(ax, B, fss)
+        artists = plot_vertical_spacing(ax, B, fss)
         plt[:show]()
         cla()
         dynamic_tss = fill(dts, fillshape)
-        (artists, xlimits, ylimits) = plot_vertical_spacing(ax, dynamic_tss)
+        artists = plot_vertical_spacing(ax, dynamic_tss)
         plt[:show]()
     end
 

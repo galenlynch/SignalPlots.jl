@@ -5,14 +5,19 @@ Calculate the spacing between dataseries for plotting, which is the mean of the
 extents times an optional scale factor.
 """
 function plot_spacing(
-    extents::A,
-    scale_factor::Number = 1.2
+    extents::A, scale_factor::Number = 1.2
 ) where {E<:Number, A<:AbstractVector{E}}
     return scale_factor * mean(extents)
 end
+
 function plot_spacing(
-    series::A,
-    args...
+    extents::A, args...
+) where {T<:NTuple{2, Number}, A<:AbstractVector{T}}
+    plot_spacing(map((t) -> t[2] - t[1], extents), args...)
+end
+
+function plot_spacing(
+    series::A, args...
 ) where {E<:AbstractVector, A<:AbstractVector{E}}
     return plot_spacing(extent(series), args...)
 end
