@@ -89,6 +89,7 @@ function ResizeableSpec(
     cmap::AbstractString = "viridis",
     args...
 )
+    yb = isempty(frange) ? extrema(ds) : (frange...)
     return ResizeableSpec(
         ds,
         clim,
@@ -97,7 +98,7 @@ function ResizeableSpec(
         ax,
         Vector{PyObject}(),
         duration(ds),
-        extrema(ds),
+        yb,
         args...
     )
 end

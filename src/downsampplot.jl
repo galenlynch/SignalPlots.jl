@@ -105,29 +105,6 @@ end
 
 
 "Make a line with place-holder data"
-function make_dummy_line end
-
 function make_dummy_line(ax::PyObject, plotargs...; plotkwargs...)
     return ax[:plot](0, 0, plotargs...; plotkwargs...)[1]::PyObject
-end
-
-"Make a line using the plot properties of an existing line"
-function make_dummy_line(ax::PyObject, l::PyObject)
-    lineout = make_dummy_line(ax)
-    lineout[:update_from](l)
-    return lineout
-end
-
-"Make multiple lines"
-function make_dummy_line(n::Integer, ax::PyObject, args...; kwargs...)
-    plots = Vector{PyObject}(n)
-    if n > 0
-        plots[1] = make_dummy_line(ax, args...; kwargs...)
-    end
-    if n > 1
-        for i in 2:n
-            plots[i] = make_dummy_line(ax, plots[1])
-        end
-    end
-    return plots
 end
