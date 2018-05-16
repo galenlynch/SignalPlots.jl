@@ -5,60 +5,14 @@ Plot a signal as two lines and a fill_between polygon
 """
 function downsamp_patch(
     ax::PyObject,
-    dts::DynamicDownsampler,
-    xbounds::NTuple{2, I},
-    ybounds::NTuple{2, I},
-    plotline::PyObject,
-    listen_ax::Vector{PyObject} = [ax];
-    toplevel::Bool = true
-) where I <: Real
-    artists = [plotline]
-    rpatch = ResizeablePatch(dts, ax, artists, xbounds, ybounds)
-    ax[:set_autoscale_on](false)
-    toplevel && set_ax_home(rpatch)
-    update_fnc = (x) -> axis_lim_changed(rpatch, x)
-    for lax in listen_ax
-        conn_fnc = lax[:callbacks][:connect]
-        conn_fnc("xlim_changed", update_fnc)
-        conn_fnc("ylim_changed", update_fnc) # TODO: Is this necessary?
-    end
-    update_fnc(ax)
-    return rpatch
-end
-
-function downsamp_patch(
-    ax::PyObject,
-    dts::DynamicDownsampler,
-    xbounds::NTuple{2, I},
-    ybounds::NTuple{2, I},
-    listen_ax::Vector{PyObject} = [ax],
-    plotargs...;
-    toplevel::Bool = true,
-    plotkwargs...
-) where I <: Real
-    plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
-    return downsamp_patch(
-        ax, dts, xbounds, ybounds, plotline, listen_ax;
-        toplevel = toplevel
-    )
-end
-
-function downsamp_patch(
-    ax::PyObject,
-    a::AbstractVector,
-    fs,
-    offset = zero(fs),
-    listen_ax::Vector{PyObject} = [ax],
     args...;
+    listen_ax::Vector{PyObject} = [ax],
+    toplevel::Bool = true,
     kwargs...
 )
-    dts = CachingDynamicTs(a, fs, offset, 1000)
-    xbounds = duration(a, fs, offset)
-    ybounds = extrema(a)
-    rpatch = downsamp_patch(
-        ax, dts, xbounds, ybounds, listen_ax, args...; kwargs...
-    )
-    return (rpatch, xbounds, ybounds)
+    rpatch = ResizeablePatch(ax, args...; kwargs...)
+    connect_callbacks(ax, rpatch, listen_ax; toplevel = toplevel)
+    return rpatch
 end
 
 """
@@ -90,10 +44,8 @@ function plot_multi_patch(
         patchartists[i] = downsamp_patch(
             ax,
             dts[i],
-            xbs[i],
-            ybs[i],
-            listen_ax,
             colorargs[i];
+            listen_ax = listen_ax,
             toplevel = false,
             plotkwargs...
         )
@@ -114,6 +66,27 @@ end
 
 function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
     return ResizeablePatch(dts, RABaseInfo(args...; kwargs...))
+end
+function ResizeablePatch(
+    ax::PyObject,
+    dts::DynamicDownsampler,
+    plotargs...;
+    plotkwargs...
+)
+    plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
+    artists = [plotline]
+    return ResizeablePatch(dts, ax, artists, duration(dts), extrema(dts))
+end
+function ResizeablePatch(
+    ax::PyObject,
+    a::AbstractVector,
+    fs,
+    offset = zero(fs),
+    args...;
+    kwargs...
+)
+    dts = CachingDynamicTs(a, fs, offset, 1000)
+    return ResizeablePatch(ax, dts, args...; kwargs...)
 end
 
 function fill_points(xs, ys, was_downsampled)
@@ -148,7 +121,7 @@ end
 function make_dummy_line end
 
 function make_dummy_line(ax::PyObject, plotargs...; plotkwargs...)
-    return ax[:plot](0, 0, plotargs...; plotkwargs...)[1]
+    return ax[:plot](0, 0, plotargs...; plotkwargs...)[1]::PyObject
 end
 
 "Make a line using the plot properties of an existing line"

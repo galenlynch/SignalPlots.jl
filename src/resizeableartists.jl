@@ -52,6 +52,12 @@ function RABaseInfo(ax::PyObject, artist::PyObject, args...)
     return RABaseInfo(ax, [artist], args...)
 end
 
+xbounds(a::RABaseInfo) = a.datalimx
+ybounds(a::RABaseInfo) = a.datalimy
+
+xbounds(a::ResizeableArtist) = xbounds(a.baseinfo)
+ybounds(a::ResizeableArtist) = ybounds(a.baseinfo)
+
 function set_ax_home(a::ResizeableArtist)
     a.baseinfo.ax[:set_ylim]([a.baseinfo.datalimy...])
     a.baseinfo.ax[:set_xlim]([a.baseinfo.datalimx...])
@@ -60,9 +66,9 @@ end
 ratiodiff(a, b) = abs(a - b) / (b + eps(b))
 
 function ax_pix_size(ax::PyObject)
-    fig = ax[:figure]
-    scale = fig[:dpi_scale_trans][:inverted]()
-    bbox = ax[:get_window_extent]()[:transformed](scale)
+    fig = ax[:figure]::PyPlot.Figure
+    scale = fig[:dpi_scale_trans][:inverted]()::PyObject
+    bbox = ax[:get_window_extent]()[:transformed](scale)::PyObject
 
     width = bbox[:width]::Float64
     height = bbox[:height]::Float64
@@ -74,9 +80,9 @@ function ax_pix_size(ax::PyObject)
 end
 
 function axis_limits(notifying_ax::PyObject, artist_ax::PyObject)
-    lims_notifying = notifying_ax[:viewLim]
+    lims_notifying = notifying_ax[:viewLim]::PyObject
     (xstart, xend) = lims_notifying[:intervalx]::Vector{Float64}
-    lims_artist = artist_ax[:viewLim]
+    lims_artist = artist_ax[:viewLim]::PyObject
     (ystart, yend) = lims_artist[:intervaly]::Vector{Float64}
     return (xstart, xend, ystart, yend)
 end
@@ -111,4 +117,22 @@ function axis_lim_changed(ra::ResizeableArtist, notifying_ax::PyObject)
             ra.baseinfo.ax[:figure][:canvas][:draw_idle]()
         end
     end
+end
+
+function connect_callbacks(
+    ax::PyObject,
+    ra::ResizeableArtist,
+    listen_ax::Vector{PyObject} = [ax];
+    toplevel::Bool = true
+)
+    ax[:set_autoscale_on](false)
+    toplevel && set_ax_home(ra)
+    update_fnc = (x) -> axis_lim_changed(ra, x)
+    for lax in listen_ax
+        conn_fnc = lax[:callbacks][:connect]::PyCall.PyObject
+        conn_fnc("xlim_changed", update_fnc)
+        conn_fnc("ylim_changed", update_fnc) # TODO: Is this necessary?
+    end
+    update_fnc(ax)
+    return ra
 end

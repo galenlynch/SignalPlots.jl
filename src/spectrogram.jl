@@ -7,62 +7,27 @@ function resizeable_spectrogram end
 
 function resizeable_spectrogram(
     ax::PyObject,
-    ds::DynamicSpectrogram,
-    xbounds::NTuple{2, I},
-    ybounds::NTuple{2, J},
-    listen_ax::Vector{PyObject} = [ax];
-    clim::AbstractVector{<:Real} = Vector{Float64}(),
-    frange::AbstractVector{<:Real} = Vector{Float64}(),
-    cmap::AbstractString = "viridis",
-    toplevel::Bool = true
-) where {I <: Real, J <: Real}
-    rartist = ResizeableSpec(
-        ds, ax, Vector{PyObject}(), xbounds, ybounds;
-        clim = clim, frange = frange
-    )
-    ax[:set_autoscale_on](false)
-    toplevel && set_ax_home(rartist)
-    update_fnc = (a) -> axis_lim_changed(rartist, a)
-    for lax in listen_ax
-        lax[:callbacks][:connect]("xlim_changed", update_fnc)
-    end
-    update_fnc(ax)
-    return rartist
-end
-function resizeable_spectrogram(
-    ax::PyObject,
-    a::AbstractVector,
-    fs::Real,
-    offset::Real = 0,
     args...;
-    frange::AbstractVector{<:Real} = Vector{Float64}(),
-    window::Array{Float64} = hanning(512),
+    listen_ax::Vector{PyObject} = [ax],
+    toplevel::Bool = true,
     kwargs...
 )
-    ds = DynamicSpectrogram(a, fs, offset, window)
-    xbounds = duration(a, fs, offset)
-    if isempty(frange)
-        freqs = rfftfreq(length(window), fs)
-        ybounds = (freqs[1], freqs[end])
-    else
-        @assert length(frange) == 2 && frange[1] <= frange[2] "invalid frange"
-        ybounds = (frange[1], frange[2])
-    end
-    return resizeable_spectrogram(
-        ax, ds, xbounds, ybounds, args...;
-        frange = frange, kwargs...
-    )
+    rartist = ResizeableSpec(ax, args...; kwargs...)
+    connect_callbacks(ax, rartist, listen_ax; toplevel = toplevel)
+    return rartist
 end
 
 struct ResizeableSpec{T<:DynamicSpectrogram} <: ResizeableArtist
     ds::T
     clim::Vector{Float64}
     frange::Vector{Float64}
+    cmap::String
     baseinfo::RABaseInfo
     function ResizeableSpec{T}(
         ds::T,
         clim::Vector{Float64},
         frange::Vector{Float64},
+        cmap::String,
         baseinfo::RABaseInfo
     ) where {T<:DynamicSpectrogram}
         nfr = length(frange)
@@ -72,29 +37,89 @@ struct ResizeableSpec{T<:DynamicSpectrogram} <: ResizeableArtist
         if ! empty_or_ordered_bound(clim)
             error("clim must be empty or be bounds")
         end
-        return new(ds, clim, frange, baseinfo)
+        return new(ds, clim, frange, cmap, baseinfo)
     end
 end
+
+# Pull type parameter
 function ResizeableSpec(
     ds::T,
     clim::Vector{Float64},
     frange::Vector{Float64},
-    args...;
+    cmap::String,
+    baseinfo::RABaseInfo
 ) where {T<:DynamicSpectrogram}
-    return ResizeableSpec{T}(ds, clim, frange, RABaseInfo(args...))
+    return ResizeableSpec{T}(ds, clim, frange, cmap, baseinfo)
 end
+
+# type conversion
 function ResizeableSpec(
-    ds::DynamicSpectrogram, args...;
-    clim::AbstractVector = [],
-    frange::AbstractVector = []
+    ds::DynamicSpectrogram,
+    clim::Vector{<:Real},
+    frange::Vector{<:Real},
+    cmap::AbstractString,
+    baseinfo::RABaseInfo
 )
     return ResizeableSpec(
         ds,
         convert(Vector{Float64}, clim),
         convert(Vector{Float64}, frange),
+        string(cmap),
+        baseinfo
+    )
+end
+
+# Make base info
+function ResizeableSpec(
+    ds::DynamicSpectrogram,
+    clim::Vector{<:Real},
+    frange::Vector{<:Real},
+    cmap::AbstractString,
+    args...
+) 
+    return ResizeableSpec(ds, clim, frange, cmap, RABaseInfo(args...))
+end
+
+# make artist, find xlim and ylim
+function ResizeableSpec(
+    ax::PyObject,
+    ds::DynamicSpectrogram,
+    clim::AbstractVector{<:Real} = Vector{Float64}(),
+    frange::AbstractVector{<:Real} = Vector{Float64}(),
+    cmap::AbstractString = "viridis",
+    args...
+)
+    return ResizeableSpec(
+        ds,
+        clim,
+        frange,
+        string(cmap),
+        ax,
+        Vector{PyObject}(),
+        duration(ds),
+        extrema(ds),
         args...
     )
 end
+
+# make dynamic spectrogram
+function ResizeableSpec(
+    ax::PyObject,
+    a::AbstractVector,
+    fs::Real,
+    offset::Real = 0,
+    args...;
+    clim::AbstractVector{<:Real} = Vector{Float64}(),
+    frange::AbstractVector{<:Real} = Vector{Float64}(),
+    window::Array{Float64} = hanning(512),
+    cmap::AbstractString = "viridis"
+)
+    ds = DynamicSpectrogram(a, fs, offset, window)
+    return ResizeableSpec(ax, ds, clim, frange, cmap, args...)
+end
+
+xbounds(a::ResizeableSpec) = duration(a.ds)
+ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
 
 function update_plotdata(ra::ResizeableSpec, xstart, xend, pixwidth)
     (t, (f, s), was_downsamped) = downsamp_req(ra.ds, xstart, xend, pixwidth)
@@ -107,7 +132,7 @@ function update_plotdata(ra::ResizeableSpec, xstart, xend, pixwidth)
 
     imartist = ra.baseinfo.ax[:imshow](
         db;
-        cmap = "viridis",
+        cmap = ra.cmap,
         extent = [t[1], t[end], f_start, f_end],
         interpolation = "nearest",
         origin = "lower",
