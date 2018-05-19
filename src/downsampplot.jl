@@ -44,13 +44,15 @@ function plot_multi_patch(
         ax[:set_ylim]([global_y...])
         ax[:set_xlim]([global_x...])
     end
-    return patchartists
+    return ad, patchartists
 end
 
-struct ResizeablePatch{T<:DynamicDownsampler} <: ResizeableArtist
+struct ResizeablePatch{T<:DynamicDownsampler} <: ResizeableArtist{T}
     dts::T
     baseinfo::RABaseInfo
 end
+downsampler(r::ResizeablePatch) = r.dts
+baseinfo(r::ResizeablePatch) = r.baseinfo
 
 function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
     return ResizeablePatch(dts, RABaseInfo(args...; kwargs...))
@@ -58,7 +60,8 @@ end
 function ResizeablePatch(
     ax::PyObject,
     dts::DynamicDownsampler,
-    plotargs...;
+    args...;
+    plotargs::Vector{Any} = [],
     plotkwargs...
 )
     plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
@@ -71,17 +74,20 @@ function ResizeablePatch(
     fs,
     offset = zero(fs),
     args...;
-    kwargs...
+    plotargs::Vector{Any} = [],
+    plotkwargs...
 )
     dts = CachingDynamicTs(a, fs, offset, 1000)
-    return ResizeablePatch(ax, dts, args...; kwargs...)
+    return ResizeablePatch(ax, dts, args...; plotargs=plotargs, plotkwargs...)
 end
 
-function fill_points(xs, ys, was_downsampled)
+function fill_points(
+    xs::A, ys::B, was_downsampled::Bool
+) where {X<:Number, A<:AbstractVector{X}, Y<:Number, T<:NTuple{2, Y}, B<:AbstractVector{T}}
     if was_downsampled
         npt = 2 * length(xs)
-        xpts = Vector{Float64}(npt)
-        ypts = Vector{Float64}(npt)
+        xpts = Vector{X}(npt)
+        ypts = Vector{Y}(npt)
         for (x_i, x) in enumerate(xs) # Enumerate over input
             # Calculate the corresponding position in the output
             i = (x_i - 1) * 2 + 1
@@ -93,14 +99,18 @@ function fill_points(xs, ys, was_downsampled)
             ypts[i + 1] = ys[x_i][2]
         end
     else
-        xpts = Vector{Float64}(xs)
-        ypts = Float64[y[1] for y in ys]
+        xpts = convert(Vector{X}, xs)
+        ypts = Y[y[1] for y in ys]
     end
     return (xpts, ypts)
 end
-function plotdata_fnc(ra::ResizeablePatch, xstart, xend, pixwidth)
-    () -> fill_points(downsamp_req(ra.dts, xstart, xend, pixwidth)...)
+
+function make_plotdata(
+    dts::DynamicDownsampler{<:NTuple{2, <:Number}}, xstart, xend, pixwidth
+)
+    fill_points(downsamp_req(dts, xstart, xend, pixwidth)...)
 end
+
 function update_artists(ra::ResizeablePatch, xpt, ypt)
     ra.baseinfo.artists[1][:set_data](xpt, ypt)
 end

@@ -8,6 +8,12 @@ using
     GLUtilities
 
 export
+    # Types
+    ParallelSpeed,
+    ParallelSlow,
+    ParallelFast,
+    FuncCall,
+
     # Functions
     downsamp_patch,
     plot_spacing,

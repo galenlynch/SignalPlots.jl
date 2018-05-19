@@ -12,7 +12,7 @@ function plot_vertical_spacing(
     y_spacing::Real = -1, # automatic if less than zero
     linewidth::Number = 2,
     toplevel::Bool = true
-) where {E<:DynamicDownsampler, A<:AbstractVector{E}}
+) where {E, D<:DynamicDownsampler{E}, A<:AbstractVector{D}}
     nts = length(ts)
     if y_spacing < 0
         if nts > 1
@@ -23,12 +23,12 @@ function plot_vertical_spacing(
         end
     end
     y_offsets = plot_offsets(nts, y_spacing)
-    mts = Vector{MappedDynamicDownsampler{E}}(nts)
+    mts = Vector{MappedDynamicDownsampler{E, D}}(nts)
     for (i, offset) in enumerate(y_offsets)
         y_transform = make_shifter(offset)
         mts[i] = MappedDynamicDownsampler(ts[i], y_transform)
     end
-    patchartists = plot_multi_patch(
+    ad, patchartists = plot_multi_patch(
         ax, mts, listen_ax;
         linewidth = linewidth, toplevel = false
     )
@@ -40,7 +40,7 @@ function plot_vertical_spacing(
         ax[:set_ylim]([expanded_ybounds...])
         ax[:set_xlim]([xb...])
     end
-    return patchartists
+    return ad, patchartists
 end
 
 function plot_vertical_spacing(

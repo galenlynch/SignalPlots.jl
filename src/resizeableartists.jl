@@ -2,7 +2,7 @@
 Base type for resizeable artists, must implement a setdata method and have a
 baseinfo field"
 """
-abstract type ResizeableArtist end
+abstract type ResizeableArtist{E<:DynamicDownsampler} end
 
 mutable struct RABaseInfo
     ax::PyObject
@@ -52,6 +52,33 @@ function RABaseInfo(ax::PyObject, artist::PyObject, args...)
     return RABaseInfo(ax, [artist], args...)
 end
 
+abstract type ParallelSpeed end
+struct ParallelFast <: ParallelSpeed end
+struct ParallelSlow <: ParallelSpeed end
+
+ParallelSpeed(::Type) = ParallelSlow()
+ParallelSpeed(::D) where {D} = ParallelSpeed(D)
+
+function ParallelSpeed(
+    ::Type{D}
+) where {E<:DynamicDownsampler, D<:ResizeableArtist{E}}
+    ParallelSpeed(E)
+end
+
+function ParallelSpeed(::Type{M}) where {S, D, M<:MappedDynamicDownsampler{S, D}}
+    return ParallelSpeed(D)
+end
+
+struct FuncCall{A<:Tuple}
+    f::Function
+    args::A
+    kwargs::Vector{Any}
+end
+function FuncCall(f::Function, args...; kwargs...)
+    FuncCall{typeof(args)}(f, args, kwargs)
+end
+call(fc::FuncCall) = fc.f(fc.args...; fc.kwargs...)
+
 xbounds(a::RABaseInfo) = a.datalimx
 ybounds(a::RABaseInfo) = a.datalimy
 
@@ -82,7 +109,7 @@ function artist_should_redraw(
     limwidth = xend - xstart,
     limcenter = (xend + xstart) / 2
 )
-    (ystart, yend) = axis_limits(ra.baseinfo.ax, :intervaly)
+    (ystart, yend) = axis_ylim(ra.baseinfo.ax)
     if artist_is_visible(ra, xstart, xend, ystart, yend)
         width_rd = ratiodiff(limwidth, ra.baseinfo.lastlimwidth)
         center_rd = ratiodiff(limcenter, ra.baseinfo.lastlimcenter)
@@ -105,15 +132,70 @@ function maybe_redraw(ra::ResizeableArtist, xstart, xend, px_width)
 end
 
 function update_plotdata(ra::ResizeableArtist, xstart, xend, pixwidth)
-    datafcn = plotdata_fnc(ra, xstart, xend, pixwidth)
-    data = datafcn()
+    ds = downsampler(ra)
+    data = make_plotdata(ds, xstart, xend, pixwidth)
     update_artists(ra, data...)
 end
 
-function update_plotdata(ras::Vector{<:ResizeableArtist}, xstart, xend, pixwidth)
-    datafncs = plotdata_fnc.(ras, xstart, xend, pixwidth)
-    all_data = pmap((f) -> f(), datafncs)
-    for (i, data) in enumerate(all_data)
-        udpate_artists(ras[i], data...)
+function update_plotdata(
+    ras::Vector{<:ResizeableArtist},
+    xstart,
+    xend,
+    pixwidth,
+    jobchannel::RemoteChannel,
+    datachannel::RemoteChannel,
+    ::AbstractVector{ParallelSlow}
+)
+    for ra in ras
+        update_plotdata(ra, xstart, xend, pixwidth)
     end
+end
+
+function update_artists end
+
+function update_plotdata(
+    ras::Vector{<:ResizeableArtist},
+    xstart,
+    xend,
+    pixwidth,
+    jobchannel::RemoteChannel,
+    datachannel::RemoteChannel,
+    ::AbstractVector{ParallelFast}
+)
+    na = length(ras)
+    func_calls = Vector{FuncCall}(na)
+    @. func_calls = plotdata_fnc(
+        downsampler(ras), xstart, xend, pixwidth
+    )
+    for job in enumerate(func_calls)
+        put!(jobchannel, job)
+    end
+    n = length(ras)
+    while n > 0
+        job_id, xs, ys = take!(datachannel)
+        update_artists(ras[job_id], xs, ys)
+        n = n - 1
+    end
+end
+
+function plotdata_fnc(cdts::D, xstart, xend, pixwidth) where {D<:DynamicDownsampler}
+    args = remote_plotdata_args(cdts)
+    return FuncCall(
+        remote_make_plotdata,
+        xstart, xend, pixwidth, D, args...
+    )
+end
+
+function remote_plotdata_args(mds::MappedDynamicDownsampler)
+    args_base = remote_plotdata_args(mds.downsampler)
+    return (mds.fmap, args_base)
+end
+
+function remote_make_plotdata(
+    xstart, xend, pixwidth,
+    ::Type{M}, mapfnc, args_base
+) where {T, A, D<:CachingDynamicTs{T, A}, S, M<:MappedDynamicDownsampler{S, D}}
+    xpt, ypt = remote_make_plotdata(xstart, xend, pixwidth, D, args_base...)
+    ymapped = mapfnc(ypt)
+    return (xpt, ymapped)
 end

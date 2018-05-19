@@ -69,8 +69,14 @@ function ax_pix_width(ax::PyObject)
     return width * dpi
 end
 
-function axis_limits(ax::PyObject, intervalfcn::Symbol=:intervalx)
-    lims = ax[:viewLim]::PyObject
-    (limstart, limend) = lims[intervalfcn]::Vector{Float64}
-    return (limstart, limend)
+axis_limits(ax::PyObject) = ax[:viewLim]::PyObject
+
+function axis_xlim(ax::PyObject)
+    bbox = axis_limits(ax)
+    return (bbox[:xmin]::Float64, bbox[:xmax]::Float64)
+end
+
+function axis_ylim(ax::PyObject)
+    bbox = axis_limits(ax)
+    return (bbox[:ymin]::Float64, bbox[:ymax]::Float64)
 end

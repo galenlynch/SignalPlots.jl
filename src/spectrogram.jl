@@ -17,7 +17,7 @@ function resizeable_spectrogram(
     return rartist
 end
 
-struct ResizeableSpec{T<:DynamicSpectrogram} <: ResizeableArtist
+struct ResizeableSpec{T<:DynamicSpectrogram} <: ResizeableArtist{T}
     ds::T
     clim::Vector{Float64}
     frange::Vector{Float64}
@@ -76,7 +76,7 @@ function ResizeableSpec(
     frange::Vector{<:Real},
     cmap::AbstractString,
     args...
-) 
+)
     return ResizeableSpec(ds, clim, frange, cmap, RABaseInfo(args...))
 end
 
@@ -84,10 +84,10 @@ end
 function ResizeableSpec(
     ax::PyObject,
     ds::DynamicSpectrogram,
+    args... ;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
     cmap::AbstractString = "viridis",
-    args...
 )
     yb = isempty(frange) ? extrema(ds) : (frange...)
     return ResizeableSpec(
@@ -117,8 +117,11 @@ function ResizeableSpec(
 )
     extra_args = isempty(window) ? () : (window,)
     ds = DynamicSpectrogram(a, fs, offset, extra_args...)
-    return ResizeableSpec(ax, ds, clim, frange, cmap, args...)
+    return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
 end
+
+downsampler(r::ResizeableSpec) = r.ds
+baseinfo(r::ResizeableSpec) = r.baseinfo
 
 xbounds(a::ResizeableSpec) = duration(a.ds)
 ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
