@@ -81,3 +81,4 @@ function axis_ylim(ax::A) where {P<:MPL, A<:Axis{P}}
     bbox = axis_limits(ax)
     return (bbox[:ymin]::Float64, bbox[:ymax]::Float64)
 end
+update_ax(ax::Axis{MPL}) = ax.ax[:figure][:canvas][:draw_idle]()

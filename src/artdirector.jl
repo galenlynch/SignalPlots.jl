@@ -99,7 +99,7 @@ function maybe_redraw(
     )
     if ! isempty(artists_to_redraw)
         for ax in ad.axes
-            ax.ax[:figure][:canvas][:draw_idle]()
+            update_ax(ax)
         end
     end
 end

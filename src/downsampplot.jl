@@ -41,15 +41,23 @@ function plot_multi_patch(
         ybs = ybounds.(patchartists)
         global_x = extrema_red(xbs)
         global_y = extrema_red(ybs)
-        ax.ax[:set_ylim]([global_y...])
-        ax.ax[:set_xlim]([global_x...])
+        setlims(ax, global_x..., global_y...)
     end
     return ad, patchartists
+end
+
+function setlims(ax::Axis{MPL}, xb, xe, yb, ye)
+        ax.ax[:set_xlim]([xb, xe])
+        ax.ax[:set_ylim]([yb, ye])
 end
 
 struct ResizeablePatch{T<:DynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,P}
     dts::T
     baseinfo::RABaseInfo
+    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}) where
+        {T<:DynamicDownsampler, P<:MPL}
+        new(dts, baseinfo)
+    end
 end
 downsampler(r::ResizeablePatch) = r.dts
 baseinfo(r::ResizeablePatch) = r.baseinfo
@@ -58,20 +66,25 @@ function ResizeablePatch(dts::T, ra::R) where
     {T<:DynamicDownsampler,P,R<:RABaseInfo{P}}
     ResizeablePatch{T,P}(dts, ra)
 end
+
 function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
     return ResizeablePatch(dts, RABaseInfo(args...; kwargs...))
 end
+
 function ResizeablePatch(
     ax::Axis,
+function ResizeablePatch(
+    ax::Axis{P},
     dts::DynamicDownsampler,
     args...;
     plotargs::Vector{Any} = [],
     plotkwargs...
-)
+) where {P<:MPL}
     plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
     artists = [plotline]
     return ResizeablePatch(dts, ax, artists, duration(dts), extrema(dts))
 end
+
 function ResizeablePatch(
     ax::Axis,
     a::AbstractVector,
@@ -121,8 +134,7 @@ function make_plotdata(
     fill_points(downsamp_req(dts, xstart, xend, pixwidth)...)
 end
 
-function update_artists(ra::R, xpt, ypt) where
-    {P<:MPL, T, R<:ResizeablePatch{T,P}}
+function update_artists(ra::ResizeablePatch{<:Any,MPL}, xpt, ypt)
     ra.baseinfo.artists[1].artist[:set_data](xpt, ypt)
 end
 

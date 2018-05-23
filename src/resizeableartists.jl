@@ -86,20 +86,24 @@ xbounds(a::ResizeableArtist) = xbounds(a.baseinfo)
 ybounds(a::ResizeableArtist) = ybounds(a.baseinfo)
 
 function set_ax_home(a::ResizeableArtist)
-    a.baseinfo.ax.ax[:set_ylim]([a.baseinfo.datalimy...])
-    a.baseinfo.ax.ax[:set_xlim]([a.baseinfo.datalimx...])
+    setlims(a.baseinfo.ax, a.baseinfo.datalimx..., a.baseinfo.datalimy...)
 end
 
 ratiodiff(a, b) = abs(a - b) / (b + eps(b))
 
-function artist_is_visible(ra::ResizeableArtist, xstart, xend, ystart, yend)
-    xoverlap = check_overlap(
-        xstart, xend, ra.baseinfo.datalimx[1], ra.baseinfo.datalimx[2]
-    )
-    yoverlap = check_overlap(
-        ystart, yend, ra.baseinfo.datalimy[1], ra.baseinfo.datalimy[2]
-    )
+function artist_is_visible(xb, xe, yb, ye, vxb, vxe, vyb, vye)
+    xoverlap = check_overlap(xb, xe, vxb, vxe)
+    yoverlap = check_overlap(yb, ye, vyb, vye)
     return xoverlap && yoverlap
+end
+
+function artist_is_visible(ra::ResizeableArtist, xstart, xend, ystart, yend)
+    limx = ra.baseinfo.datalimx
+    limy = ra.baseinfo.datalimy
+    return artist_is_visible(
+        xstart, xend, ystart, yend,
+        limx[1], limx[2], limy[1], limy[2]
+    )
 end
 
 function artist_should_redraw(
@@ -127,7 +131,7 @@ function maybe_redraw(ra::ResizeableArtist, xstart, xend, px_width)
         ra.baseinfo.lastlimwidth = limwidth
         ra.baseinfo.lastlimcenter = limcenter
         update_plotdata(ra, xstart, xend, px_width)
-        ra.baseinfo.ax.ax[:figure][:canvas][:draw_idle]()
+        update_ax(ra.baseinfo.ax)
     end
 end
 

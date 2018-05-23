@@ -12,7 +12,7 @@ function plot_vertical_spacing(
     y_spacing::Real = -1, # automatic if less than zero
     linewidth::Number = 2,
     toplevel::Bool = true
-) where {P<:MPL,B<:Axis{P},E, D<:DynamicDownsampler{E}, A<:AbstractVector{D}}
+) where {B<:Axis, E, D<:DynamicDownsampler{E}, A<:AbstractVector{D}}
     nts = length(ts)
     if y_spacing < 0
         if nts > 1
@@ -37,8 +37,7 @@ function plot_vertical_spacing(
         yb = (extrema(mts[1])[1], extrema(mts[end])[2])
         y_expansion = y_spacing * 0.1
         expanded_ybounds = (yb[1] - y_expansion, yb[2] + y_expansion)
-        ax.ax[:set_ylim]([expanded_ybounds...])
-        ax.ax[:set_xlim]([xb...])
+        setlims(ax, xb..., expanded_ybounds...)
     end
     return ad, patchartists
 end
