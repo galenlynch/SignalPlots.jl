@@ -11,7 +11,7 @@ function resizeable_spectrogram(
     listen_ax::Vector{A} = [ax],
     toplevel::Bool = true,
     kwargs...
-) where {P<:PlotLib, A<:Axis{P}}
+) where {A<:Axis}
     rartist = ResizeableSpec(ax, args...; kwargs...)
     connect_callbacks(ax, rartist, listen_ax; toplevel = toplevel)
     return rartist
@@ -29,15 +29,31 @@ struct ResizeableSpec{T<:DynamicSpectrogram, P} <: ResizeableArtist{T,P}
         frange::Vector{Float64},
         cmap::String,
         baseinfo::B
-    ) where {T<:DynamicSpectrogram, P, B<:RABaseInfo{P}}
-        nfr = length(frange)
+    ) where {T<:DynamicSpectrogram, P<:MPL, B<:RABaseInfo{P}}
+        range_check(frange, clim)
+        return new(ds, clim, frange, cmap, baseinfo)
+    end
+    function ResizeableSpec{T,P}(
+        ds::T,
+        clim::Vector{Float64},
+        frange::Vector{Float64},
+        cmap::String,
+        baseinfo::B
+    ) where {T<:DynamicSpectrogram, P<:PQTG, B<:RABaseInfo{P}}
+        range_check(frange, clim)
+        r = new(ds, clim, frange, cmap, baseinfo)
+        di = DownsampImage(r)
+        di[:setOpts](axisOrder="row-major")
+        push!(r.baseinfo.artists, Artist{P}(di))
+        return r
+    end
+    function range_check(frange, clim)
         if ! empty_or_ordered_bound(frange)
             error("frange must be empty or be bounds")
         end
         if ! empty_or_ordered_bound(clim)
             error("clim must be empty or be bounds")
         end
-        return new(ds, clim, frange, cmap, baseinfo)
     end
 end
 
@@ -87,7 +103,7 @@ function ResizeableSpec(
     args... ;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
-    cmap::AbstractString = "viridis",
+    cmap::AbstractString = def_cmap(ax)
 ) where {P<:PlotLib, A<:Axis{P}}
     yb = isempty(frange) ? extrema(ds) : (frange...)
     return ResizeableSpec(
@@ -105,7 +121,7 @@ end
 
 # make dynamic spectrogram
 function ResizeableSpec(
-    ax::Axis,
+    ax::Axis{P},
     a::AbstractVector,
     fs::Real,
     offset::Real = 0,
@@ -113,12 +129,17 @@ function ResizeableSpec(
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
     window::Array{Float64} = Vector{Float64}(),
-    cmap::AbstractString = "viridis"
-)
+    cmap::AbstractString = def_cmap(ax)
+) where {P<:PlotLib}
     extra_args = isempty(window) ? () : (window,)
     ds = DynamicSpectrogram(a, fs, offset, extra_args...)
     return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
 end
+
+def_cmap(::Type{<:PlotLib}) = ""
+def_cmap(::Type{MPL}) = "viridis"
+def_cmap(::Type{A}) where {P, A<:Axis{P}} = def_cmap(P)
+def_cmap(::A) where {A<:Axis} = def_cmap(A)
 
 downsampler(r::ResizeableSpec) = r.ds
 baseinfo(r::ResizeableSpec) = r.baseinfo
@@ -165,16 +186,31 @@ function update_artists(
         ra.baseinfo.ax.ax[:imshow](
             db;
             cmap = ra.cmap,
-            extent = [
-                t_start - t_w/2, t_end + t_w/2,
-                f_start - f_w/2, f_end + f_w/2
-            ],
+            extent = bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w),
             interpolation = "nearest",
             origin = "lower",
             aspect = "auto"
         )
     )
     push!(ra.baseinfo.artists, imartist)
+end
+
+function bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w)
+    extent = [
+        t_start - t_w/2, t_end + t_w/2,
+        f_start - f_w/2, f_end + f_w/2
+    ]
+    return extent
+end
+
+function update_artists(
+    ra::ResizeableSpec{<:Any, P}, t_start, t_end, f_start, f_end, t_w, f_w, db
+) where {P<:PQTG}
+    ra.baseinfo.artists[1].artist[:setImage](db)
+    (x_s, x_e, y_s, y_e) = bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w)
+    qtrect = qtc[:QRectF](x_s, y_s, x_e - x_s, y_e - y_s)::PyObject
+    ra.baseinfo.artists[1].artist[:setRect](qtrect)
+    nothing
 end
 
 function clipval!(a::AbstractArray, c::NTuple{2, R}) where {R<:Number}

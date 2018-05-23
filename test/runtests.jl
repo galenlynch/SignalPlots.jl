@@ -34,34 +34,6 @@ using Base.Test
 
         downsamp_patch(qtax, dts)
 
-        #=
-        qtplt[:enableAutoRange](false, false)
-        qtplt[:setXRange](duration(dts)...)
-        const vb = qtplt[:getViewBox]()
-        const qtax = Axis{PQTG}(vb)
-        GLPlotting.axis_xlim(qtax)
-        GLPlotting.ax_px_width(qtax)
-
-        const curve = DownsampCurve(dts)
-
-        qtplt[:addItem](curve)
-        =#
-
-#= Remote plotting (doesn't seem to work)
-        const app = pg[:mkQApp]()
-
-        const view = rv.RemoteGraphicsView()
-
-        const layout = pg[:LayoutWidget]()
-        layout[:addWidget](view)
-        layout[:resize](800, 800)
-        layout[:show]()
-
-        const rplt = view[:pg][:PlotItem]()
-        rplt[:_setProxyOptions](deferGetattr=true)
-        view[:setCentralItem](rplt)
-=#
-
     end
 
     @testset "resizeableartists" begin
@@ -134,6 +106,12 @@ using Base.Test
 
     @testset "spectrogram" begin
         const B = sin.(2 * pi * 10 .* (1:npt) ./ fs) .+ 0.1 .* randn(npt)
+
+        const qtplt = pg[:plot]()
+        const vb = get_viewbox(qtplt)
+        const qtax = Axis{PQTG}(vb)
+        const rs = resizeable_spectrogram(qtax, B, fs)
+
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try

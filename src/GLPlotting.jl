@@ -29,7 +29,9 @@ export
     get_viewbox
 
 const pg = PyNULL()
+const qtc = PyNULL()
 const DownsampCurve = PyNULL()
+const DownsampImage = PyNULL()
 
 include("plotlibs.jl")
 include("util.jl")
@@ -42,23 +44,44 @@ include("spectrogram.jl")
 
 function __init__()
     copy!(pg, pyimport("pyqtgraph"))
+    copy!(qtc, pg[:Qt][:QtCore])
+
+    # Create pyqtgraph subclasses used by this package
     temp_downsampcurve =
         PyCall.@pydef_object mutable struct DownsampCurve <: pg[:PlotCurveItem]
             function __init__(
-                self,
-                resizeableArtist::ResizeableArtist,
+                self::PyObject,
+                resizeablePatch::ResizeablePatch,
                 args...;
                 kwargs...
             )
-                self[:resizeableArtist] = resizeableArtist
-                pg[:PlotCurveItem][:__init__](self,args...;kwargs...)
+                self[:resizeablePatch] = resizeablePatch
+                pg[:PlotCurveItem][:__init__](self, args...; kwargs...)
             end
 
             function viewRangeChanged(self::PyObject, args...)
-                axis_lim_changed(self[:resizeableArtist])
+                axis_lim_changed(self[:resizeablePatch])
             end
         end
     copy!(DownsampCurve, temp_downsampcurve)
+
+    temp_downsampimage =
+        PyCall.@pydef_object mutable struct DownsampImage <: pg[:ImageItem]
+            function __init__(
+                self::PyObject,
+                resizeableSpec::ResizeableSpec,
+                args...;
+                kwargs...
+            )
+                self[:resizeableSpec] = resizeableSpec
+                pg[:ImageItem][:__init__](self, args...; kwargs...)
+            end
+
+            function viewRangeChanged(self::PyObject, args...)
+                axis_lim_changed(self[:resizeableSpec])
+            end
+        end
+    copy!(DownsampImage, temp_downsampimage)
 end
 
 end # module
