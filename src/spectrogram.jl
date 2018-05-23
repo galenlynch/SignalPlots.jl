@@ -142,6 +142,7 @@ function update_plotdata(ra::R, xstart, xend, pixwidth) where
             cmap = ra.cmap,
             extent = [t[1], t[end], f_start, f_end],
             interpolation = "nearest",
+            origin = "lower",
             aspect = "auto"
         )
     )
