@@ -72,6 +72,14 @@ function axis_lim_changed(
     maybe_redraw(ra, xstart, xend, pixwidth)
 end
 
+function axis_lim_changed(ra::ResizeableArtist{<:Any,PQTG})
+    axis_lim_changed(ra, ra.baseinfo.ax)
+end
+
+function axis_lim_changed(ra::ArtDirector{<:Any,PQTG,<:Any,<:Any})
+    axis_lim_changes(ra, ra.axes[1])
+end
+
 function maybe_redraw(
     ad::ArtDirector,
     xstart,

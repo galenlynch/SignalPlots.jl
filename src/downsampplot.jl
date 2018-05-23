@@ -51,6 +51,11 @@ function setlims(ax::Axis{MPL}, xb, xe, yb, ye)
         ax.ax[:set_ylim]([yb, ye])
 end
 
+function setlims(ax::Axis{PQTG}, xb, xe, yb, ye)
+        ax.ax[:setXRange](xb, xe)
+        ax.ax[:setYRange](yb, ye)
+end
+
 struct ResizeablePatch{T<:DynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,P}
     dts::T
     baseinfo::RABaseInfo
@@ -58,7 +63,14 @@ struct ResizeablePatch{T<:DynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,
         {T<:DynamicDownsampler, P<:MPL}
         new(dts, baseinfo)
     end
+    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}) where
+        {T<:DynamicDownsampler, P<:PQTG}
+        r = new(dts, baseinfo)
+        push!(r.baseinfo.artists, Artist{P}(DownsampCurve(r)))
+        return r
+    end
 end
+
 downsampler(r::ResizeablePatch) = r.dts
 baseinfo(r::ResizeablePatch) = r.baseinfo
 
@@ -72,7 +84,15 @@ function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
 end
 
 function ResizeablePatch(
-    ax::Axis,
+    ax::Axis{P}, dts::DynamicDownsampler, args...;
+    plotargs::Vector{Any} = [], plotkwargs...
+) where {P<:PQTG}
+    xbounds = duration(dts)
+    ybounds = extrema(dts)
+    artists = Vector{Artist{P}}()
+    return ResizeablePatch(dts, ax, artists, xbounds, ybounds)
+end
+
 function ResizeablePatch(
     ax::Axis{P},
     dts::DynamicDownsampler,
@@ -136,6 +156,10 @@ end
 
 function update_artists(ra::ResizeablePatch{<:Any,MPL}, xpt, ypt)
     ra.baseinfo.artists[1].artist[:set_data](xpt, ypt)
+end
+
+function update_artists(ra::ResizeablePatch{<:Any,PQTG}, xpt, ypt)
+    ra.baseinfo.artists[1].artist[:setData](xpt, ypt)
 end
 
 "Make a line with place-holder data"

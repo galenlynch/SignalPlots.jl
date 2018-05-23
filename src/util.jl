@@ -68,6 +68,20 @@ function ax_pix_width(ax::A) where {P<:MPL, A<:Axis{P}}
 
     return width * dpi
 end
+
+function get_viewbox(a::PyObject)
+    vb = a
+    while vb != nothing && vb[:__class__][:__name__] != "ViewBox"
+        vb = vb[:getViewBox]()
+    end
+    return vb
+end
+
+function ax_pix_width(a::Axis{PQTG})
+    sg = a.ax[:screenGeometry]()::PyObject
+    return sg[:width]()::Int
+end
+
 function axis_limits(ax::A) where {P<:MPL, A<:Axis{P}}
     ax.ax[:viewLim]::PyObject
 end
@@ -81,4 +95,22 @@ function axis_ylim(ax::A) where {P<:MPL, A<:Axis{P}}
     bbox = axis_limits(ax)
     return (bbox[:ymin]::Float64, bbox[:ymax]::Float64)
 end
+
+function axis_limits(a::Axis{PQTG})
+    vrange = a.ax[:viewRange]()
+    r = convert(Array{Float64, 2}, vrange)
+    return ((r[1,1], r[1,2]), (r[2,1], r[2,2]))
+end
+
+function axis_xlim(a::Axis{PQTG})
+    (xbounds, ybounds) = axis_limits(a)
+    return xbounds
+end
+
+function axis_ylim(a::Axis{PQTG})
+    (xbounds, ybounds) = axis_limits(a)
+    return ybounds
+end
+
 update_ax(ax::Axis{MPL}) = ax.ax[:figure][:canvas][:draw_idle]()
+update_ax(ax::Axis{PQTG}) = nothing

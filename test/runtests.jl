@@ -1,3 +1,7 @@
+using PyCall
+pygui_start(:qt)
+#@pyimport  pyqtgraph.widgets.RemoteGraphicsView as rv
+
 using GLPlotting, PyPlot, GLUtilities, GLTimeseries
 using Base.Test
 
@@ -19,7 +23,46 @@ using Base.Test
     const A = rand(npt)
     const fs = 100
     const dts = CachingDynamicTs(A, fs)
+
     const ds = DynamicSpectrogram(A, fs)
+
+    @testset "pyqtgraph" begin
+
+        const qtplt = pg[:plot]()
+        const vb = get_viewbox(qtplt)
+        const qtax = Axis{PQTG}(vb)
+
+        downsamp_patch(qtax, dts)
+
+        #=
+        qtplt[:enableAutoRange](false, false)
+        qtplt[:setXRange](duration(dts)...)
+        const vb = qtplt[:getViewBox]()
+        const qtax = Axis{PQTG}(vb)
+        GLPlotting.axis_xlim(qtax)
+        GLPlotting.ax_px_width(qtax)
+
+        const curve = DownsampCurve(dts)
+
+        qtplt[:addItem](curve)
+        =#
+
+#= Remote plotting (doesn't seem to work)
+        const app = pg[:mkQApp]()
+
+        const view = rv.RemoteGraphicsView()
+
+        const layout = pg[:LayoutWidget]()
+        layout[:addWidget](view)
+        layout[:resize](800, 800)
+        layout[:show]()
+
+        const rplt = view[:pg][:PlotItem]()
+        rplt[:_setProxyOptions](deferGetattr=true)
+        view[:setCentralItem](rplt)
+=#
+
+    end
 
     @testset "resizeableartists" begin
         const xs = [1, 2]
@@ -63,6 +106,7 @@ using Base.Test
         fillshape = (2,)
         B = fill(A, fillshape)
         fss = fill(fs, fillshape)
+
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
@@ -74,6 +118,12 @@ using Base.Test
         ax = Axis{MPL}(ax)
         try
             dynamic_tss = fill(dts, fillshape)
+
+            const qtplt = pg[:plot]()
+            const vb = get_viewbox(qtplt)
+            const qtax = Axis{PQTG}(vb)
+            qtartists = plot_vertical_spacing(qtax, dynamic_tss)
+
             artists = plot_vertical_spacing(ax, dynamic_tss)
             plt[:show]()
         catch

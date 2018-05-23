@@ -10,3 +10,8 @@ end
 struct Artist{P<:PlotLib}
     artist::PyObject
 end
+
+struct GView{P<:PlotLib}
+    gview::PyObject
+end
+
