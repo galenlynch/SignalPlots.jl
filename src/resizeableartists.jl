@@ -137,9 +137,12 @@ end
 
 function update_plotdata(ra::ResizeableArtist, xstart, xend, pixwidth)
     ds = downsampler(ra)
-    data = make_plotdata(ds, xstart, xend, pixwidth)
+    args = update_args(ra)
+    data = make_plotdata(ds, xstart, xend, pixwidth, args...)
     update_artists(ra, data...)
 end
+
+update_args(::ResizeableArtist) = ()
 
 function update_plotdata(
     ras::Vector{<:ResizeableArtist},

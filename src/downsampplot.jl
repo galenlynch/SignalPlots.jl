@@ -59,13 +59,14 @@ end
 struct ResizeablePatch{T<:DynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,P}
     dts::T
     baseinfo::RABaseInfo
-    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}) where
+    exact::Bool
+    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}, exact::Bool) where
         {T<:DynamicDownsampler, P<:MPL}
-        new(dts, baseinfo)
+        new(dts, baseinfo, exact)
     end
-    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}) where
+    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}, exact::Bool) where
         {T<:DynamicDownsampler, P<:PQTG}
-        r = new(dts, baseinfo)
+        r = new(dts, baseinfo, exact)
         push!(r.baseinfo.artists, Artist{P}(DownsampCurve(r)))
         return r
     end
@@ -74,35 +75,41 @@ end
 downsampler(r::ResizeablePatch) = r.dts
 baseinfo(r::ResizeablePatch) = r.baseinfo
 
-function ResizeablePatch(dts::T, ra::R) where
+function ResizeablePatch(dts::T, ra::R, exact::Bool = false) where
     {T<:DynamicDownsampler,P,R<:RABaseInfo{P}}
-    ResizeablePatch{T,P}(dts, ra)
+    ResizeablePatch{T,P}(dts, ra, exact)
 end
 
-function ResizeablePatch(dts::DynamicDownsampler, args...; kwargs...)
-    return ResizeablePatch(dts, RABaseInfo(args...; kwargs...))
+function ResizeablePatch(
+    dts::DynamicDownsampler, args...;
+    exact::Bool = false, kwargs...
+)
+    return ResizeablePatch(dts, RABaseInfo(args...; kwargs...), exact)
 end
 
 function ResizeablePatch(
     ax::Axis{P}, dts::DynamicDownsampler, args...;
-    plotargs::Vector{Any} = [], plotkwargs...
+    exact::Bool = false, plotargs::Vector{Any} = [], plotkwargs...
 ) where {P<:PQTG}
     xbounds = duration(dts)
     ybounds = extrema(dts)
     artists = Vector{Artist{P}}()
-    return ResizeablePatch(dts, ax, artists, xbounds, ybounds)
+    return ResizeablePatch(dts, ax, artists, xbounds, ybounds; exact=exact)
 end
 
 function ResizeablePatch(
     ax::Axis{P},
     dts::DynamicDownsampler,
     args...;
+    exact::Bool = false,
     plotargs::Vector{Any} = [],
     plotkwargs...
 ) where {P<:MPL}
     plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
     artists = [plotline]
-    return ResizeablePatch(dts, ax, artists, duration(dts), extrema(dts))
+    return ResizeablePatch(
+        dts, ax, artists, duration(dts), extrema(dts); exact=exact
+    )
 end
 
 function ResizeablePatch(
@@ -111,11 +118,15 @@ function ResizeablePatch(
     fs,
     offset = zero(fs),
     args...;
+    exact::Bool = false,
     plotargs::Vector{Any} = [],
     plotkwargs...
 )
     dts = CachingDynamicTs(a, fs, offset, 1000)
-    return ResizeablePatch(ax, dts, args...; plotargs=plotargs, plotkwargs...)
+    return ResizeablePatch(
+        ax, dts, args...;
+        exact=exact, plotargs=plotargs, plotkwargs...
+    )
 end
 
 function fill_points(
@@ -148,10 +159,12 @@ function fill_points(
     return (xpts, ypts)
 end
 
+update_args(ra::ResizeablePatch) = (ra.exact,)
+
 function make_plotdata(
-    dts::DynamicDownsampler{<:NTuple{2, <:Number}}, xstart, xend, pixwidth
+    dts::DynamicDownsampler{<:NTuple{2, <:Number}}, xstart, xend, pixwidth, exact
 )
-    fill_points(downsamp_req(dts, xstart, xend, pixwidth, false, Int32)...)
+    fill_points(downsamp_req(dts, xstart, xend, pixwidth, exact, Int32)...)
 end
 
 function update_artists(ra::ResizeablePatch{<:Any,MPL}, xpt, ypt)

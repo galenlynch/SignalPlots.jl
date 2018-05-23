@@ -126,11 +126,36 @@ baseinfo(r::ResizeableSpec) = r.baseinfo
 xbounds(a::ResizeableSpec) = duration(a.ds)
 ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
 
-function update_plotdata(ra::R, xstart, xend, pixwidth) where
-    {P<:MPL, R<:ResizeableSpec{<:DynamicSpectrogram, P}}
-    (t, (f, s), was_downsamped) = downsamp_req(ra.ds, xstart, xend, pixwidth)
-    (db, f_start, f_end) = process_spec_data(ra, f, s)
+update_args(ra::ResizeableSpec) = (ra.frange, ra.clim)
 
+function make_plotdata(ds::DynamicSpectrogram, xstart, xend, pixwidth, frange, clim)
+    (t, (f, s), was_downsamped) = downsamp_req(ds, xstart, xend, pixwidth)
+    (db, f_start, f_end) = process_spec_data(s, f, frange, clim)
+    return (t[1], t[end], f_start, f_end, db)
+end
+
+function process_spec_data(s, f, frange, clim)
+    if isempty(frange)
+        f_start = f[1]
+        f_end = f[end]
+        sel_s = s
+    else
+        f_start_i = searchsortedfirst(f, frange[1])
+        f_end_i = searchsortedlast(f, frange[2])
+        f_start = f[f_start_i]
+        f_end = f[f_end_i]
+        sel_s = view(s, f_start_i:f_end_i, 1:size(s, 2))
+    end
+    db = p2db.(sel_s)
+    if !isempty(clim)
+        clipval!(db, (clim[1], clim[2]))
+    end
+    return (db, f_start, f_end)
+end
+
+function update_artists(
+    ra::ResizeableSpec{<:Any, P}, t_start, t_end, f_start, f_end, db
+) where {P<:MPL}
     if ! isempty(ra.baseinfo.artists)
         ra.baseinfo.artists[1].artist[:remove]()
         pop!(ra.baseinfo.artists)
@@ -140,33 +165,13 @@ function update_plotdata(ra::R, xstart, xend, pixwidth) where
         ra.baseinfo.ax.ax[:imshow](
             db;
             cmap = ra.cmap,
-            extent = [t[1], t[end], f_start, f_end],
+            extent = [t_start, t_end, f_start, f_end],
             interpolation = "nearest",
             origin = "lower",
             aspect = "auto"
         )
     )
     push!(ra.baseinfo.artists, imartist)
-end
-
-function process_spec_data(ra::R, f, s) where
-    {P<:MPL, R<:ResizeableSpec{<:DynamicSpectrogram, P}}
-    if isempty(ra.frange)
-        f_start = f[1]
-        f_end = f[end]
-        sel_s = s
-    else
-        f_start_i = searchsortedfirst(f, ra.frange[1])
-        f_end_i = searchsortedlast(f, ra.frange[2])
-        f_start = f[f_start_i]
-        f_end = f[f_end_i]
-        sel_s = view(s, f_start_i:f_end_i, 1:size(s, 2))
-    end
-    db = p2db.(sel_s)
-    if !isempty(ra.clim)
-        clipval!(db, (ra.clim[1], ra.clim[2]))
-    end
-return (db, f_start, f_end)
 end
 
 function clipval!(a::AbstractArray, c::NTuple{2, R}) where {R<:Number}
