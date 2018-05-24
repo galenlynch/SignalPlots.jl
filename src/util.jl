@@ -69,17 +69,17 @@ function ax_pix_width(ax::A) where {P<:MPL, A<:Axis{P}}
     return ceil(Int, width * dpi)
 end
 
+function ax_pix_width(a::Axis{PQTG})
+    sg = a.ax[:screenGeometry]()::PyObject
+    return sg[:width]()::Int
+end
+
 function get_viewbox(a::PyObject)
     vb = a
     while vb != nothing && vb[:__class__][:__name__] != "ViewBox"
         vb = vb[:getViewBox]()
     end
     return vb
-end
-
-function ax_pix_width(a::Axis{PQTG})
-    sg = a.ax[:screenGeometry]()::PyObject
-    return sg[:width]()::Int
 end
 
 function axis_limits(ax::A) where {P<:MPL, A<:Axis{P}}
