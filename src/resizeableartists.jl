@@ -2,7 +2,7 @@
 Base type for resizeable artists, must implement a setdata method and have a
 baseinfo field"
 """
-abstract type ResizeableArtist{E<:DynamicDownsampler, P<:PlotLib} end
+abstract type ResizeableArtist{E<:AbstractDynamicDownsampler, P<:PlotLib} end
 
 mutable struct RABaseInfo{P<:PlotLib}
     ax::Axis{P}
@@ -61,7 +61,7 @@ ParallelSpeed(::D) where {D} = ParallelSpeed(D)
 
 function ParallelSpeed(
     ::Type{D}
-) where {E<:DynamicDownsampler, D<:ResizeableArtist{E}}
+) where {E<:AbstractDynamicDownsampler, D<:ResizeableArtist{E}}
     ParallelSpeed(E)
 end
 
@@ -201,7 +201,7 @@ function update_plotdata(
     end
 end
 
-function plotdata_fnc(cdts::D, xstart, xend, pixwidth) where {D<:DynamicDownsampler}
+function plotdata_fnc(cdts::D, xstart, xend, pixwidth) where {D<:AbstractDynamicDownsampler}
     args = remote_plotdata_args(cdts)
     return FuncCall(
         remote_make_plotdata,
@@ -217,7 +217,7 @@ end
 function remote_make_plotdata(
     xstart, xend, pixwidth,
     ::Type{M}, mapfnc, args_base
-) where {D<:DynamicDownsampler, M<:MappedDynamicDownsampler{<:Any, D}}
+) where {D<:AbstractDynamicDownsampler, M<:MappedDynamicDownsampler{<:Any, D}}
     xpt, ypt = remote_make_plotdata(xstart, xend, pixwidth, D, args_base...)
     ymapped = mapfnc(ypt)
     return (xpt, ymapped)

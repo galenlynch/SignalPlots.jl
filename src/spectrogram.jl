@@ -113,7 +113,7 @@ function ResizeableSpec(
         string(cmap),
         ax,
         Vector{Artist{P}}(),
-        duration(ds),
+        time_interval(ds),
         yb,
         args...
     )
@@ -144,7 +144,7 @@ def_cmap(::A) where {A<:Axis} = def_cmap(A)
 downsampler(r::ResizeableSpec) = r.ds
 baseinfo(r::ResizeableSpec) = r.baseinfo
 
-xbounds(a::ResizeableSpec) = duration(a.ds)
+xbounds(a::ResizeableSpec) = time_interval(a.ds)
 ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
 
 update_args(ra::ResizeableSpec) = (ra.frange, ra.clim)

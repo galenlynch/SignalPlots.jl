@@ -12,7 +12,7 @@ function plot_vertical_spacing(
     y_spacing::Real = -1, # automatic if less than zero
     linewidth::Number = 2,
     toplevel::Bool = true
-) where {B<:Axis, E, D<:DynamicDownsampler{E}, A<:AbstractVector{D}}
+) where {B<:Axis, E, D<:AbstractDynamicDownsampler{E}, A<:AbstractVector{D}}
     nts = length(ts)
     if y_spacing < 0
         if nts > 1
@@ -33,7 +33,7 @@ function plot_vertical_spacing(
         linewidth = linewidth, toplevel = false
     )
     if toplevel
-        xb = extrema_red(duration.(mts))
+        xb = extrema_red(time_interval.(mts))
         yb = (extrema(mts[1])[1], extrema(mts[end])[2])
         y_expansion = y_spacing * 0.1
         expanded_ybounds = (yb[1] - y_expansion, yb[2] + y_expansion)
@@ -51,6 +51,6 @@ function plot_vertical_spacing(
     kwargs...
 ) where {E<:Number, B<:AbstractVector{E}, A<:AbstractVector{B}}
     plot_offs = isempty(offsets) ? zeros(E, length(As)) : offsets
-    dts = CachingDynamicTs.(As, fss, plot_offs)
+    dts = CacheAccessor.(MaxMin, As, fss, plot_offs)
     return plot_vertical_spacing(ax, dts, args...; kwargs...)
 end

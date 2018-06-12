@@ -22,7 +22,7 @@ using Base.Test
     const npt = 10000
     const A = rand(npt)
     const fs = 100
-    const dts = CachingDynamicTs(A, fs)
+    const dts = CacheAccessor(MaxMin, A, fs)
 
     const ds = DynamicSpectrogram(A, fs)
 
