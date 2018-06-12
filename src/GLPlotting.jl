@@ -5,7 +5,8 @@ using
     PyPlot,
     PyCall,
     GLTimeseries,
-    GLUtilities
+    GLUtilities,
+    Missings
 
 export
     # Types

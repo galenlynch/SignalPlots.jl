@@ -1,7 +1,7 @@
 """
     resizeable_spectrogram
 
-plot a resizeable spectrogram of a signal in a matplotlib axis
+plot the spectrogram of a signal in a resizeable context
 """
 function resizeable_spectrogram end
 
@@ -17,7 +17,7 @@ function resizeable_spectrogram(
     return rartist
 end
 
-struct ResizeableSpec{T<:DynamicSpectrogram, P} <: ResizeableArtist{T,P}
+struct ResizeableSpec{T<:AbstractDynamicSpectrogram, P} <: ResizeableArtist{T,P}
     ds::T
     clim::Vector{Float64}
     frange::Vector{Float64}
@@ -29,7 +29,7 @@ struct ResizeableSpec{T<:DynamicSpectrogram, P} <: ResizeableArtist{T,P}
         frange::Vector{Float64},
         cmap::String,
         baseinfo::B
-    ) where {T<:DynamicSpectrogram, P<:MPL, B<:RABaseInfo{P}}
+    ) where {T<:AbstractDynamicSpectrogram, P<:MPL, B<:RABaseInfo{P}}
         range_check(frange, clim)
         return new(ds, clim, frange, cmap, baseinfo)
     end
@@ -39,7 +39,7 @@ struct ResizeableSpec{T<:DynamicSpectrogram, P} <: ResizeableArtist{T,P}
         frange::Vector{Float64},
         cmap::String,
         baseinfo::B
-    ) where {T<:DynamicSpectrogram, P<:PQTG, B<:RABaseInfo{P}}
+    ) where {T<:AbstractDynamicSpectrogram, P<:PQTG, B<:RABaseInfo{P}}
         range_check(frange, clim)
         r = new(ds, clim, frange, cmap, baseinfo)
         di = DownsampImage(r)
@@ -64,7 +64,7 @@ function ResizeableSpec(
     frange::Vector{Float64},
     cmap::String,
     baseinfo::RABaseInfo{P}
-) where {T<:DynamicSpectrogram, P}
+) where {T<:AbstractDynamicSpectrogram, P<:PlotLib}
     return ResizeableSpec{T,P}(ds, clim, frange, cmap, baseinfo)
 end
 
@@ -74,8 +74,8 @@ function ResizeableSpec(
     clim::AbstractVector{<:Real},
     frange::AbstractVector{<:Real},
     cmap::AbstractString,
-    baseinfo::R
-) where {T<:DynamicSpectrogram, R<:RABaseInfo}
+    baseinfo::RABaseInfo
+) where T<:AbstractDynamicSpectrogram # method disambiguation
     return ResizeableSpec(
         ds,
         convert(Vector{Float64}, clim),
@@ -87,7 +87,7 @@ end
 
 # Make base info
 function ResizeableSpec(
-    ds::DynamicSpectrogram,
+    ds::AbstractDynamicSpectrogram,
     clim::AbstractVector{<:Real},
     frange::AbstractVector{<:Real},
     cmap::AbstractString,
@@ -99,7 +99,7 @@ end
 # make artist, find xlim and ylim
 function ResizeableSpec(
     ax::A,
-    ds::DynamicSpectrogram,
+    ds::AbstractDynamicSpectrogram,
     args... ;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
@@ -128,11 +128,12 @@ function ResizeableSpec(
     args...;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
-    window::Array{Float64} = Vector{Float64}(),
-    cmap::AbstractString = def_cmap(ax)
+    cmap::AbstractString = def_cmap(ax),
+    binsize::Integer = 512,
+    winfun::Union{Function, Missing} = missing
 ) where {P<:PlotLib}
-    extra_args = isempty(window) ? () : (window,)
-    ds = DynamicSpectrogram(a, fs, offset, extra_args...)
+    extra_kwargs = ismissing(winfun) ? () : ((:winfun, winfun),)
+    ds = CachingStftPsd(a, binsize, fs, offset; extra_kwargs...)
     return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
 end
 
@@ -149,7 +150,7 @@ ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
 
 update_args(ra::ResizeableSpec) = (ra.frange, ra.clim)
 
-function make_plotdata(ds::DynamicSpectrogram, xstart, xend, pixwidth, frange, clim)
+function make_plotdata(ds::AbstractDynamicSpectrogram, xstart, xend, pixwidth, frange, clim)
     (t, (f, s, t_w, f_w), was_downsamped) = downsamp_req(ds, xstart, xend, pixwidth)
     (db, f_start, f_end) = process_spec_data(s, f, frange, clim)
     return (t[1], t[end], f_start, f_end, t_w, f_w, db)

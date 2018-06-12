@@ -23,8 +23,9 @@ using Base.Test
     const A = rand(npt)
     const fs = 100
     const dts = CacheAccessor(MaxMin, A, fs)
+    const wl = 512
 
-    const ds = DynamicSpectrogram(A, fs)
+    const ds = CachingStftPsd(A, wl, fs)
 
     @testset "pyqtgraph" begin
 
@@ -134,7 +135,9 @@ using Base.Test
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
-            rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13], clim = [-20, 0])
+            rspec = resizeable_spectrogram(
+                ax, B, fs, 0, frange = [7, 13], clim = [-20, 0]
+            )
             colorbar(rspec.baseinfo.artists[1].artist)
             plt[:show]()
         catch
