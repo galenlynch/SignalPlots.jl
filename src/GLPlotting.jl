@@ -2,6 +2,7 @@ __precompile__()
 module GLPlotting
 
 using
+    PyQtGraph,
     PyPlot,
     PyCall,
     GLTimeseries,
@@ -18,7 +19,6 @@ export
     ParallelSlow,
     ParallelFast,
     FuncCall,
-    pg,
     DownsampCurve,
 
     # Functions
@@ -26,11 +26,8 @@ export
     plot_spacing,
     plot_offsets,
     plot_vertical_spacing,
-    resizeable_spectrogram,
-    get_viewbox
+    resizeable_spectrogram
 
-const pg = PyNULL()
-const qtc = PyNULL()
 const DownsampCurve = PyNULL()
 const DownsampImage = PyNULL()
 
@@ -44,9 +41,6 @@ include("verticallyspaced.jl")
 include("spectrogram.jl")
 
 function __init__()
-    copy!(pg, pyimport("pyqtgraph"))
-    copy!(qtc, pg[:Qt][:QtCore])
-
     # Create pyqtgraph subclasses used by this package
     temp_downsampcurve =
         PyCall.@pydef_object mutable struct DownsampCurve <: pg[:PlotCurveItem]

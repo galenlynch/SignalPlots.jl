@@ -2,7 +2,7 @@ using PyCall
 pygui_start(:qt)
 #@pyimport  pyqtgraph.widgets.RemoteGraphicsView as rv
 
-using GLPlotting, PyPlot, GLUtilities, GLTimeseries
+using GLPlotting, PyPlot, GLUtilities, GLTimeseries, PyQtGraph
 using Base.Test
 
 @testset "GLPlotting"  begin
