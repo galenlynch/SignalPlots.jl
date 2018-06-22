@@ -129,11 +129,11 @@ function ResizeableSpec(
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
     cmap::AbstractString = def_cmap(ax),
-    binsize::Integer = 512,
+    binsize::Integer = 256,
     winfun::Union{Function, Missing} = missing
 ) where {P<:PlotLib}
     extra_kwargs = ismissing(winfun) ? () : ((:winfun, winfun),)
-    ds = CachingStftPsd(a, binsize, fs, offset; extra_kwargs...)
+    ds = DynCachingStftPsd(a, binsize, fs, offset, 0.8; extra_kwargs...)
     return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
 end
 
