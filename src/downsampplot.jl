@@ -9,7 +9,7 @@ function downsamp_patch(
     listen_ax::Vector{A} = [ax],
     toplevel::Bool = true,
     kwargs...
-) where {P<:PlotLib, A<:Axis{P}}
+) where {A<:Axis}
     rpatch = ResizeablePatch(ax, args...; kwargs...)
     connect_callbacks(ax, rpatch, listen_ax; toplevel = toplevel)
     return rpatch
@@ -48,7 +48,7 @@ end
 
 struct ResizeablePatch{T<:AbstractDynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,P}
     dts::T
-    baseinfo::RABaseInfo
+    baseinfo::RABaseInfo{P}
     exact::Bool
     function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}, exact::Bool) where
         {T<:AbstractDynamicDownsampler, P<:MPL}
@@ -62,7 +62,6 @@ struct ResizeablePatch{T<:AbstractDynamicDownsampler, P<:PlotLib} <: ResizeableA
     end
 end
 
-downsampler(r::ResizeablePatch) = r.dts
 
 function ResizeablePatch(dts::T, ra::R, exact::Bool = false) where
     {T<:AbstractDynamicDownsampler,P,R<:RABaseInfo{P}}
@@ -117,6 +116,8 @@ function ResizeablePatch(
         exact=exact, plotargs=plotargs, plotkwargs...
     )
 end
+
+downsampler(r::ResizeablePatch) = r.dts
 
 function fill_points(
     xs::A, ys::B, was_downsampled::Bool
