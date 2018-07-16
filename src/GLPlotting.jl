@@ -7,7 +7,8 @@ using
     PyCall,
     GLTimeseries,
     GLUtilities,
-    Missings
+    Missings,
+    PointProcesses
 
 export
     # Types
@@ -20,6 +21,7 @@ export
     ParallelFast,
     FuncCall,
     DownsampCurve,
+    MergingPoints,
 
     # Functions
     downsamp_patch,
@@ -27,6 +29,7 @@ export
     plot_offsets,
     plotitem_to_ax,
     plot_vertical_spacing,
+    point_boxes,
     resizeable_spectrogram
 
 const DownsampCurve = PyNULL()
@@ -40,6 +43,7 @@ include("redraw.jl")
 include("downsampplot.jl")
 include("verticallyspaced.jl")
 include("spectrogram.jl")
+include("ptplot.jl")
 
 function __init__()
     # Create pyqtgraph subclasses used by this package
@@ -47,7 +51,7 @@ function __init__()
         PyCall.@pydef_object mutable struct DownsampCurve <: pg[:PlotCurveItem]
             function __init__(
                 self::PyObject,
-                resizeablePatch::ResizeablePatch,
+                resizeablePatch::ResizeableArtist,
                 args...;
                 kwargs...
             )

@@ -2,8 +2,33 @@ using PyCall
 pygui_start(:qt)
 #@pyimport  pyqtgraph.widgets.RemoteGraphicsView as rv
 
-using GLPlotting, PyPlot, GLUtilities, GLTimeseries, PyQtGraph
+using GLPlotting, PyPlot, GLUtilities, GLTimeseries, PyQtGraph, PointProcesses
+
 using Base.Test
+
+
+    @testset "boxplot" begin
+        pttimes = rand(20)
+        ptamps = rand(20)
+        const qtplt = pg[:plot]()
+        const vb = get_viewbox(qtplt)
+        const qtax = Axis{PQTG}(vb)
+        ra = point_boxes(qtax, pttimes, ptamps, 0.01)
+
+        #=
+        pts = VariablePoints(pttimes, ptamps, 0, 1)
+        dpb = DynamicPointBoxer(pts, 0.01)
+        xbounds = time_interval(dpb)
+        ybounds = extrema(dpb)
+        artists = Vector{Artist{PQTG}}()
+        ra = GLPlotting.RABaseInfo(qtax, artists, xbounds, ybounds)
+        mp = MergingPoints{typeof(dpb), PQTG}(dpb, ra)
+        mp2 = MergingPoints(dpb, ra)
+        mp3 = MergingPoints(dpb, qtax, artists, xbounds, ybounds)
+        mp4 = MergingPoints(qtax, dpb)
+        =#
+    end
+
 
 @testset "GLPlotting"  begin
     @testset "util" begin
