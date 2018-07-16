@@ -39,7 +39,7 @@ function plot_vertical_spacing(
         expanded_ybounds = (yb[1] - y_expansion, yb[2] + y_expansion)
         setlims(ax, xb..., expanded_ybounds...)
     end
-    return ad, patchartists
+    return ad, patchartists, y_offsets
 end
 
 function plot_vertical_spacing(
