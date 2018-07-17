@@ -132,8 +132,7 @@ function ResizeableSpec(
     binsize::Integer = 256,
     winfun::Union{Function, Missing} = missing
 ) where {P<:PlotLib}
-    extra_kwargs = ismissing(winfun) ? () : ((:winfun, winfun),)
-    ds = DynCachingStftPsd(a, binsize, fs, offset, 0.8; extra_kwargs...)
+    ds = DynCachingStftPsd(a, binsize, fs, winfun, offset, 0.8)
     return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
 end
 
