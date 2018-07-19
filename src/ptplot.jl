@@ -60,32 +60,60 @@ function point_boxes_multi(
     ad, rmps
 end
 
+function point_boxes_multi(
+    ax::Axis,
+    pts::AbstractVector{<:DynamicPointDownsampler},
+    min_width::Number,
+    y_offsets::AbstractVector{<:Number},
+    args...; kwargs...
+)
+    boxers = DynamicPointBoxer.(pts, min_width, y_offsets)
+    point_boxes_multi(ax, boxers, args...; kwargs...)
+end
+
+function point_boxes_multi(
+    ax::Axis, pts::AbstractVector{<:Points}, args...; kwargs...
+)
+    point_boxes_multi(ax, DynamicPointDownsampler.(pts), args...; kwargs...)
+end
+
+function point_boxes_multi(
+    ax::Axis,
+    pttimes::AbstractVector{<:AbstractVector{<:Number}},
+    ptmarks::AbstractVector{<:AbstractVector{<:Number}},
+    args...; kwargs...
+)
+    point_boxes_multi(ax, VariablePoints.(pttimes, ptmarks), args...; kwargs...)
+end
+
 struct MergingPoints{T<:DynamicPointBoxer, P<:PlotLib} <: ResizeableArtist{T, P}
     dynamicpoints::T
     baseinfo::RABaseInfo{P}
     function MergingPoints{T,P}(
-        dts::T, baseinfo::RABaseInfo{P}
+        dts::T, baseinfo::RABaseInfo{P}; plotkwargs...
     ) where {T<:DynamicPointBoxer, P<:MPL}
         new(dts, baseinfo)
     end
     function MergingPoints{T,P}(
-        dynamicpoints::T, baseinfo::RABaseInfo{P}
+        dynamicpoints::T, baseinfo::RABaseInfo{P}; plotkwargs...
     ) where {T<:DynamicPointBoxer, P<:PQTG}
         r = new(dynamicpoints, baseinfo)
-        push!(r.baseinfo.artists, Artist{P}(DownsampCurve(r, connect = "finite")))
+        push!(r.baseinfo.artists, Artist{P}(DownsampCurve(
+            r, connect = "finite"; plotkwargs...
+        )))
         r
     end
 end
 
 # Pull type parameters
 function MergingPoints(
-    dynamicpoints::T, ra::R
+    dynamicpoints::T, ra::R; plotkwargs...
 ) where {T<:DynamicPointBoxer, P, R<:RABaseInfo{P}}
-    MergingPoints{T, P}(dynamicpoints, ra)
+    MergingPoints{T, P}(dynamicpoints, ra; plotkwargs...)
 end
 
-function MergingPoints(dpb::DynamicPointBoxer, args...)
-    MergingPoints(dpb, RABaseInfo(args...))
+function MergingPoints(dpb::DynamicPointBoxer, args...; plotkwargs...)
+    MergingPoints(dpb, RABaseInfo(args...); plotkwargs...)
 end
 
 function MergingPoints(
@@ -95,7 +123,7 @@ function MergingPoints(
     xbounds = time_interval(dts)
     ybounds = extrema(dts)
     artists = Vector{Artist{P}}()
-    return MergingPoints(dts, ax, artists, xbounds, ybounds)
+    return MergingPoints(dts, ax, artists, xbounds, ybounds; plotkwargs...)
 end
 
 function MergingPoints(

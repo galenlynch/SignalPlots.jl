@@ -1,36 +1,42 @@
 using PyCall
-pygui_start(:qt)
-#@pyimport  pyqtgraph.widgets.RemoteGraphicsView as rv
 
 using GLPlotting, PyPlot, GLUtilities, GLTimeseries, PyQtGraph, PointProcesses
 
 using Base.Test
 
+const app = QtApp()
 
-    @testset "boxplot" begin
-        pttimes = rand(20)
-        ptamps = rand(20)
+const npt = 10000
+const A = rand(npt)
+const fs = 100
+const dts = CacheAccessor(MaxMin, A, fs)
+const wl = 512
+
+const ds = CachingStftPsd(A, wl, fs)
+
+@testset "GLPlotting"  begin
+
+    @testset "ts and spikes" begin
+        fillshape = (2,)
+        dynamic_tss = fill(dts, fillshape)
+
         const qtplt = pg[:plot]()
         const vb = get_viewbox(qtplt)
         const qtax = Axis{PQTG}(vb)
-        ra = point_boxes(qtax, pttimes, ptamps, 0.01)
+        ad, qtartists, y_offsets = plot_vertical_spacing(qtax, dynamic_tss)
 
-        #=
-        pts = VariablePoints(pttimes, ptamps, 0, 1)
-        dpb = DynamicPointBoxer(pts, 0.01)
-        xbounds = time_interval(dpb)
-        ybounds = extrema(dpb)
-        artists = Vector{Artist{PQTG}}()
-        ra = GLPlotting.RABaseInfo(qtax, artists, xbounds, ybounds)
-        mp = MergingPoints{typeof(dpb), PQTG}(dpb, ra)
-        mp2 = MergingPoints(dpb, ra)
-        mp3 = MergingPoints(dpb, qtax, artists, xbounds, ybounds)
-        mp4 = MergingPoints(qtax, dpb)
-        =#
+        ptts = fill(rand(20), 2)
+        ptmarks = fill(rand(20), 2)
+
+        _, rabs = point_boxes_multi(
+            qtax, ptts, ptmarks, 0.0015, y_offsets;
+            director = ad, toplevel = false
+        )
+
+        app(qtplt)
+
     end
 
-
-@testset "GLPlotting"  begin
     @testset "util" begin
         const C = [0, 1]
         const B = fill(C, (2,))
@@ -44,14 +50,6 @@ using Base.Test
         @test plot_offsets(B) == collect(0:1.2:1.2)
     end
 
-    const npt = 10000
-    const A = rand(npt)
-    const fs = 100
-    const dts = CacheAccessor(MaxMin, A, fs)
-    const wl = 512
-
-    const ds = CachingStftPsd(A, wl, fs)
-
     @testset "pyqtgraph" begin
 
         const qtplt = pg[:plot]()
@@ -59,7 +57,7 @@ using Base.Test
         const qtax = Axis{PQTG}(vb)
 
         downsamp_patch(qtax, dts)
-
+        app(vb)
     end
 
     @testset "resizeableartists" begin
@@ -87,6 +85,35 @@ using Base.Test
         end
     end
 
+
+    @testset "boxplot" begin
+
+        pttimes = rand(20)
+        ptamps = rand(20)
+        const qtplt = pg[:plot]()
+        const vb = get_viewbox(qtplt)
+        const qtax = Axis{PQTG}(vb)
+
+        pts_1 = VariablePoints(pttimes, ptamps)
+
+        dpds = DynamicPointDownsampler(pts_1)
+        dpb = DynamicPointBoxer(dpds, 0.01)
+
+        ra1 = point_boxes(qtax, dpb, 0.01)
+        ra = point_boxes(qtax, pttimes, ptamps, 0.01, 0.0)
+
+        app(qtplt)
+
+        const qtplt = pg[:plot]()
+        const vb = get_viewbox(qtplt)
+        const qtax = Axis{PQTG}(vb)
+
+        pttimes_2 = rand(20)
+        pts_2 = VariablePoints(pttimes_2, ptamps)
+        ad, ram = point_boxes_multi(qtax, [pts_1, pts_2], 0.01, [0, 1])
+        app(qtplt)
+    end
+
     @testset "downsampplot" begin
         (xs, ys, was_downsamped) = downsamp_req(dts, 0, 1, 10)
         (fig, ax) = subplots()
@@ -101,14 +128,16 @@ using Base.Test
     end
 
     @testset "verticallyspaced" begin
+
         fillshape = (2,)
         B = fill(A, fillshape)
         fss = fill(fs, fillshape)
 
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
+
         try
-            artists = plot_vertical_spacing(ax, B, fss)
+            ad, artists, y_offsets = plot_vertical_spacing(ax, B, fss)
         finally
             close()
         end
@@ -125,7 +154,6 @@ using Base.Test
             artists = plot_vertical_spacing(ax, dynamic_tss)
             plt[:show]()
         catch
-            close()
             rethrow()
         end
     end
@@ -137,6 +165,7 @@ using Base.Test
         const vb = get_viewbox(qtplt)
         const qtax = Axis{PQTG}(vb)
         const rs = resizeable_spectrogram(qtax, B, fs)
+        app(qtplt)
 
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)

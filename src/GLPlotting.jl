@@ -30,7 +30,8 @@ export
     plotitem_to_ax,
     plot_vertical_spacing,
     point_boxes,
-    resizeable_spectrogram
+    point_boxes_multi,
+    resizeable_spectrogram,
     qt_subplots
 
 const DownsampCurve = PyNULL()

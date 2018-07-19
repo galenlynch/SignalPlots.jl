@@ -75,7 +75,7 @@ end
 
 function ax_pix_width(a::Axis{PQTG})
     sg = a.ax[:screenGeometry]()::PyObject
-    return sg[:width]()::Int
+    sg[:width]()::Int
 end
 
 function axis_limits(ax::A) where {P<:MPL, A<:Axis{P}}
