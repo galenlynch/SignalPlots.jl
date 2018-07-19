@@ -31,6 +31,7 @@ export
     plot_vertical_spacing,
     point_boxes,
     resizeable_spectrogram
+    qt_subplots
 
 const DownsampCurve = PyNULL()
 const DownsampImage = PyNULL()
@@ -44,6 +45,7 @@ include("downsampplot.jl")
 include("verticallyspaced.jl")
 include("spectrogram.jl")
 include("ptplot.jl")
+include("gloss.jl")
 
 function __init__()
     # Create pyqtgraph subclasses used by this package
