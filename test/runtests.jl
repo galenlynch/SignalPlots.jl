@@ -1,6 +1,4 @@
-using PyCall
-
-using GLPlotting, PyPlot, GLUtilities, GLTimeseries, PyQtGraph, PointProcesses
+using GLPlotting, PyPlot, PyCall, GLUtilities, GLTimeseries, PyQtGraph, PointProcesses
 
 using Base.Test
 
