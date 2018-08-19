@@ -1,9 +1,9 @@
 julia 0.6 2
 PyCall 1.11.0 2
 PyPlot 2 3
-GLUtilities 0.0.3
-GLTimeseries 0.0.4
-Missings 0.2 0.3
-PyQtGraph 0
+GLUtilities 0.0.5
+GLTimeseries 0.0.5
+Missings 0.2
+PyQtGraph 0.0.2
 Compat 1 2
-PointProcesses
+PointProcesses 0.0.2

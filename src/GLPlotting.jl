@@ -13,7 +13,6 @@ using
 
 @static if VERSION >= v"0.7.0-DEV.2575"
     using Distributed, Statistics
-else
 end
 
 export
