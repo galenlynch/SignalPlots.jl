@@ -31,6 +31,7 @@ struct ResizeableSpec{T<:AbstractDynamicSpectrogram, P} <: ResizeableArtist{T,P}
         baseinfo::B
     ) where {T<:AbstractDynamicSpectrogram, P<:MPL, B<:RABaseInfo{P}}
         range_check(frange, clim)
+        baseinfo.ax.ax[:autoscale](false, axis = "both")
         return new(ds, clim, frange, cmap, baseinfo)
     end
     function ResizeableSpec{T,P}(
@@ -137,7 +138,7 @@ function ResizeableSpec(
 end
 
 def_cmap(::Type{<:PlotLib}) = ""
-def_cmap(::Type{MPL}) = "viridis"
+def_cmap(::Type{MPL}) = "grayalpha"
 def_cmap(::Type{A}) where {P, A<:Axis{P}} = def_cmap(P)
 def_cmap(::A) where {A<:Axis} = def_cmap(A)
 
@@ -183,13 +184,14 @@ function update_artists(
         pop!(ra.baseinfo.artists)
     end
 
+    extent = bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w)
     imartist = Artist{P}(
         ra.baseinfo.ax.ax[:imshow](
             db;
+            origin = "bottom",
             cmap = ra.cmap,
-            extent = bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w),
+            extent = extent,
             interpolation = "nearest",
-            origin = "lower",
             aspect = "auto"
         )
     )

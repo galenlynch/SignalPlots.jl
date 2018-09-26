@@ -126,17 +126,29 @@ function artist_should_redraw(
     return redraw
 end
 
-function maybe_redraw(ra::ResizeableArtist, xstart, xend, px_width::Integer)
+function maybe_redraw(ra::ResizeableArtist, xstart, xend)
     limwidth = xend - xstart
     limcenter = (xend + xstart) / 2
-    res = (xend - xstart) / px_width
     if artist_should_redraw(ra, xstart, xend, limwidth, limcenter)
-        ra.baseinfo.lastlimwidth = limwidth
-        ra.baseinfo.lastlimcenter = limcenter
-        npx = compress_px(ra, xstart, xend, px_width)
-        update_plotdata(ra, xstart, xend, npx, res)
-        update_ax(ra.baseinfo.ax)
+        redraw(ra, xstart, xend, limwidth, limcenter)
     end
+end
+
+function force_redraw(ra::ResizeableArtist)
+    (xstart, xend) = axis_xlim(baseinfo(ra).ax)
+    limwidth = xend - xstart
+    limcenter = (xend + xstart) / 2
+    redraw(ra, xstart, xend, limwidth, limcenter)
+end
+
+function redraw(ra::ResizeableArtist, xstart, xend, limwidth, limcenter)
+    npx = ax_pix_width(baseinfo(ra).ax)
+    px_data_width = (xend - xstart) / npx
+    npx_artist = compress_px(ra, xstart, xend, npx)
+    ra.baseinfo.lastlimwidth = limwidth
+    ra.baseinfo.lastlimcenter = limcenter
+    update_plotdata(ra, xstart, xend, npx_artist, px_data_width)
+    update_ax(ra.baseinfo.ax)
 end
 
 function compress_px(
@@ -167,14 +179,14 @@ function update_plotdata(
     ras::AbstractVector{<:ResizeableArtist},
     xstart,
     xend,
-    pixwidths,
-    res,
+    npx_artists::AbstractVector{<:Integer},
+    px_data_widths::AbstractVector{<:Real},
     jobchannel::RemoteChannel,
     datachannel::RemoteChannel,
     ::AbstractVector{ParallelSlow},
 )
     for (i, ra) in enumerate(ras)
-        update_plotdata(ra, xstart, xend, pixwidths[i], res)
+        update_plotdata(ra, xstart, xend, npx_artists[i], px_data_widths[i])
     end
 end
 

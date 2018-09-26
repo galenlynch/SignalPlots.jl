@@ -122,8 +122,7 @@ function axis_lim_changed(
     notifying_ax::Axis
 )
     (xstart, xend) = axis_xlim(notifying_ax)
-    pixwidth = ax_pix_width(notifying_ax)
-    maybe_redraw(ra, xstart, xend, pixwidth)
+    maybe_redraw(ra, xstart, xend)
 end
 
 function axis_lim_changed(ra::ResizeableArtist{<:Any,PQTG})
@@ -134,31 +133,39 @@ function axis_lim_changed(ra::ArtDirector{PQTG,<:Any})
     axis_lim_changes(ra, ra.axes[1])
 end
 
-function maybe_redraw(
+function force_redraw(ad::ArtDirector)
+    if ! isempty(ad.axes)
+        (xstart, xend) = axis_xlim(ad.axes[1])
+        limwidth = xend - xstart
+        limcenter = (xend + xstart) / 2
+        redraw(ad, ad.artists, xstart, xend, limwidth, limcenter)
+    end
+end
+
+function redraw(
     ad::ArtDirector,
+    artist_to_redraw::AbstractVector{<:ResizeableArtist},
     xstart,
     xend,
-    px_width::T
-) where T<:Integer
-    artists_to_redraw = similar(ad.artists, 0)
-    limwidth = xend - xstart
-    limcenter = (xend + xstart) / 2
-    res = (xend - xstart) / px_width
-    px = Vector{T}()
-    for ra in ad.artists
-        if artist_should_redraw(ra, xstart, xend, limwidth, limcenter)
-            ra.baseinfo.lastlimwidth = limwidth
-            ra.baseinfo.lastlimcenter = limcenter
-            push!(px, compress_px(ra, xstart, xend, px_width))
-            push!(artists_to_redraw, ra)
-        end
+    limwidth,
+    limcenter
+)
+    nra = length(artists_to_redraw)
+    px_artists = Vector{Int}()
+    px_data_widths = Vector{Float64}()
+    for (ra_no, ra) in enumerate(artists_to_redraw)
+        npx = ax_pix_width(baseinfo(ra).ax)
+        px_data_widths[ra_no] = (xend - xstart) / npx
+        baseinfo(ra).lastlimwidth = limwidth
+        baseinfo(ra).lastlimcenter = limcenter
+        px_artists[ra_no] = compress_px(ra, xstart, xend, npx)
     end
     update_plotdata(
         artists_to_redraw,
         xstart,
         xend,
-        px,
-        res,
+        px_artists,
+        px_data_widths,
         ad.jobchannel,
         ad.datachannel,
         ad.pspeeds
@@ -168,4 +175,23 @@ function maybe_redraw(
             update_ax(ax)
         end
     end
+end
+
+function maybe_redraw(
+    ad::ArtDirector,
+    xstart,
+    xend,
+    npx::T
+) where T<:Integer
+    artists_to_redraw = similar(ad.artists, 0)
+    limwidth = xend - xstart
+    limcenter = (xend + xstart) / 2
+    px_width = (xend - xstart) / npx
+    px_artists = Vector{T}()
+    for ra in ad.artists
+        if artist_should_redraw(ra, xstart, xend, limwidth, limcenter)
+            push!(artists_to_redraw, ra)
+        end
+    end
+    redraw_artists(ad, artists_to_redraw, xstart, xend, limwidth, limcenter)
 end

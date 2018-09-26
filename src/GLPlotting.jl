@@ -38,7 +38,15 @@ export
     point_boxes_multi,
     resizeable_spectrogram,
     qt_subplots,
-    remove
+    remove,
+    raster_plot,
+    add_labels,
+    make_patch_collection,
+    matplotlib_scalebar,
+    make_lc_coords,
+    electrode_circles,
+    force_redraw
+
 
 const DownsampCurve = PyNULL()
 const DownsampImage = PyNULL()
@@ -52,6 +60,7 @@ include("downsampplot.jl")
 include("verticallyspaced.jl")
 include("spectrogram.jl")
 include("ptplot.jl")
+include("rasterplot.jl")
 include("gloss.jl")
 
 function __init__()
@@ -91,6 +100,12 @@ function __init__()
             end
         end
     copy!(DownsampImage, temp_downsampimage)
+
+    grayalpha = matplotlib[:colors][:LinearSegmentedColormap][:from_list](
+        "grayalpha",
+        [(0,0,0,0), (0,0,0,1)]
+    )
+    register_cmap("grayalpha", grayalpha)
 end
 
 end # module

@@ -162,7 +162,9 @@ function MergingPoints(
     args...;
     kwargs...
 )
-    MergingPoints(ax, VariablePoints(xpts, heights), args...; kwargs...)
+    MergingPoints(
+        ax, VariablePoints(xpts, heights), args...; kwargs...
+    )
 end
 
 downsampler(r::MergingPoints) = r.dynamicpoints
@@ -215,4 +217,8 @@ end
 
 function update_artists(ra::MergingPoints{<:Any,PQTG}, xpt, ypt, connect)
     ra.baseinfo.artists[1].artist[:setData](xpt, ypt, connect = connect)
+end
+
+function update_artists(ra::MergingPoints{<:Any,MPL}, xpt, ypt, args...)
+    ra.baseinfo.artists[1].artist[:set_data](xpt, ypt)
 end

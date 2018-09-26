@@ -68,7 +68,7 @@ function ax_pix_width(ax::A) where {P<:MPL, A<:Axis{P}}
     bbox = ax.ax[:get_window_extent]()[:transformed](scale)::PyObject
 
     width = bbox[:width]::Float64
-    dpi = fig[:dpi]::Float64
+    dpi = fig[:dpi]::Union{Int, Float64}
 
     return ceil(Int, width * dpi)
 end
