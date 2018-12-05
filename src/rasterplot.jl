@@ -281,6 +281,21 @@ function electrode_circles(;kwargs...)
     )
 end
 
+function electrode_grid(;kwargs...)
+    n_g = length(FLEX_XS)
+    rects = Vector{PyObject}(undef, n_g)
+    for i in 1:n_g
+        rects[i] = PyPlot.matplotlib[:patches][:Rectangle](
+            (FLEX_XS[i] - FLEX_PITCH / 2, FLEX_YS[i] - FLEX_PITCH / 2),
+            FLEX_PITCH,
+            FLEX_PITCH
+        )
+    end
+    PyPlot.matplotlib[:collections][:PatchCollection](
+        rects; match_original = false, kwargs...
+    )
+end
+
 const PI_XS = [
     -98.9867, 98.9867, 0.0, 98.9867, -98.9867, 0.0, 98.9867, -98.9867, 0.0,
     98.9867, 0.0, 98.9867, 0.0, -98.9867, 98.9867, 0.0, -98.9867, 98.9867,
@@ -292,3 +307,13 @@ const PI_YS = [
     -342.9, -400.05, -285.75
 ]
 const PI_PITCH = 114.3
+
+const FLEX_XS = [
+    -130.0, 130.0, 0.0, 130.0, -130.0, 0.0, 130.0, -130.0, 0.0, 130.0, 0.0,
+    130.0, 0.0, -130.0, 130.0, 0.0, -130.0, 130.0, 0.0, 130.0, -130.0
+]
+const FLEX_YS = [
+    325.0, 455.0, 455.0, 325.0, 195.0, 325.0, 195.0, 65.0, 195.0, 65.0, 65.0,
+    -65.0, -65.0, -65.0, -195.0, -195.0, -195.0, -325.0, -325.0, -455.0, -325.0
+]
+const FLEX_PITCH = 130

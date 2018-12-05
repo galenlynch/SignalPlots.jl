@@ -45,6 +45,7 @@ export
     matplotlib_scalebar,
     make_lc_coords,
     electrode_circles,
+    electrode_grid,
     force_redraw
 
 
