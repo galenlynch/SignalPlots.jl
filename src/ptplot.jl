@@ -136,7 +136,7 @@ function MergingPoints(
     plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
     artists = [plotline]
     MergingPoints(
-        dts, ax, artists, time_interval(dts), extrema(dts)
+        dts, ax, artists, bounds(time_interval(dts)), extrema(dts)
     )
 end
 
