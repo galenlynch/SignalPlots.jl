@@ -1,8 +1,8 @@
 function raster_plot(
     ax::PyObject,
     ticks::AbstractVector{<:AbstractVector{<:Number}},
-    pre,
-    post,
+    pre = 0,
+    post = mapreduce(maximum, max, ticks, init = 0),
     patch_sets::Union{
         Nothing,
         AbstractVector{<:AbstractVector{<:AbstractVector}}
