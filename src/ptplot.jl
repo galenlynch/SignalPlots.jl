@@ -120,7 +120,7 @@ function MergingPoints(
     ax::Axis{P}, dts::DynamicPointBoxer, args...;
     plotargs::Vector{Any} = [], plotkwargs...
 ) where {P<:PQTG}
-    xbounds = time_interval(dts)
+    xbounds = bounds(time_interval(dts))
     ybounds = extrema(dts)
     artists = Vector{Artist{P}}()
     return MergingPoints(dts, ax, artists, xbounds, ybounds; plotkwargs...)
