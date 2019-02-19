@@ -4,13 +4,15 @@
 Plot a set of points with boxes around each point, merging if necessary.
 """
 function point_boxes(
-    ax::Axis{P}, xp, hp, mt;
+    ax::Axis{P}, xpoints, heights, min_t, y_center = 0;
     listen_ax::AbstractVector{Axis{P}} = [ax],
     toplevel::Bool = true,
     pen = def_line_colors[1],
     kwargs...
 ) where P<:PlotLib
-    rmp = MergingPoints(ax, xp, hp, mt; pen = pen, kwargs...)
+    rmp = MergingPoints(
+        ax, xpoints, heights, min_t, y_center; pen = pen, kwargs...
+    )
     connect_callbacks(ax, rmp, listen_ax; toplevel = toplevel)
     rmp
 end

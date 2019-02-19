@@ -195,3 +195,9 @@ function maybe_redraw(
     end
     redraw_artists(ad, artists_to_redraw, xstart, xend, limwidth, limcenter)
 end
+
+function remove(ax::Axis{PQTG}, ras::ArtDirector{PQTG, <:Any})
+    for ra in ras.artists
+        remove(ax, ra)
+    end
+end
