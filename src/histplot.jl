@@ -28,8 +28,14 @@ function glbar(
     labels = nothing,
     plot_kwargs...
 )
-    bottoms = zeros(length(xs))
     nseries = length(ys)
+    if colors != nothing && length(colors) != nseries
+        error("Length of colors, $(length(colors)), does not match $nseries")
+    end
+    if labels != nothing && length(labels) != nseries
+        error("Labels not long enough")
+    end
+    bottoms = zeros(length(xs))
     outs = Vector{Tuple{Vararg{PyObject}}}(undef, nseries)
     for i = 1:nseries
         if colors == nothing
