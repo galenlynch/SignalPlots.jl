@@ -52,11 +52,13 @@ export
     electrode_grid,
     force_redraw,
     glbar,
-    histplot
+    histplot,
+    kill_figure
 
 
 const DownsampCurve = PyNULL()
 const DownsampImage = PyNULL()
+const py_gc = PyNULL()
 
 include("plotlibs.jl")
 include("util.jl")
@@ -114,6 +116,8 @@ function __init__()
         [(0,0,0,0), (0,0,0,1)]
     )
     register_cmap("grayalpha", grayalpha)
+
+    copy!(py_gc, pyimport("gc"))
 end
 
 end # module

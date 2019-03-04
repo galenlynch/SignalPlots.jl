@@ -137,3 +137,9 @@ function plotitem_to_ax(py::PyObject)
     vb = get_viewbox(py)::PyObject
     Axis{PQTG}(vb)
 end
+
+function kill_figure(f)
+    f[:clf]()
+    PyPlot.close(f)
+    py_gc.collect()
+end
