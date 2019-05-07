@@ -142,7 +142,8 @@ function make_lc_coords(
     nbasis = length(xs)
     @compat out = Array{Float32, 3}(undef, nrep, nbasis, 2)
     out[:, :, 1] .= reshape(xs, 1, nbasis)
-    out[:, :, 2] = permutedims(ys)
+    pys = permutedims(ys)
+    out[:, :, 2] .= ifelse.(ismissing.(pys), NaN, pys)
     out
 end
 
