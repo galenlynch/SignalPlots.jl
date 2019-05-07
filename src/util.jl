@@ -64,11 +64,11 @@ end
 
 function ax_pix_width(ax::A) where {P<:MPL, A<:Axis{P}}
     fig = ax.ax.figure::PyPlot.Figure
-    scale = fig[:dpi_scale_trans].inverted()::PyObject
+    scale = fig.dpi_scale_trans.inverted()::PyObject
     bbox = ax.ax.get_window_extent().transformed(scale)::PyObject
 
     width = bbox.width::Float64
-    dpi = fig[:dpi]::Union{Int, Float64}
+    dpi = fig.dpi::Union{Int, Float64}
 
     return ceil(Int, width * dpi)
 end
@@ -130,7 +130,7 @@ function setlims(ax::Axis{PQTG}, xb, xe, yb, ye)
         ax.ax.setYRange(yb, ye)
 end
 
-update_ax(ax::Axis{MPL}) = ax.ax.figure[:canvas].draw_idle()
+update_ax(ax::Axis{MPL}) = ax.ax.figure.canvas.draw_idle()
 update_ax(ax::Axis{PQTG}) = nothing
 
 function plotitem_to_ax(py::PyObject)
@@ -139,7 +139,9 @@ function plotitem_to_ax(py::PyObject)
 end
 
 function kill_figure(f)
-    f[:clf]()
+    f.clf()
     PyPlot.close(f)
     py_gc.collect()
 end
+
+remove(ax::Axis{PQTG}, obj::PyObject) = ax.ax.removeItem(obj)::Nothing
