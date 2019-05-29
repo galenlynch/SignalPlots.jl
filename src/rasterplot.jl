@@ -271,7 +271,7 @@ function matplotlib_scalebar(
         loc,
         child = p,
         bbox_to_anchor = axes_pos,
-        bbox_transform = ax[trans],
+        bbox_transform = getproperty(ax, trans),
         frameon = false
     )
 
