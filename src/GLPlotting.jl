@@ -54,7 +54,10 @@ export
     force_redraw,
     glbar,
     histplot,
-    kill_figure
+    kill_figure,
+    plot_cnmfe_results!,
+    glstem_zeros!,
+    glstem!
 
 
 const DownsampCurve = PyNULL()
@@ -70,8 +73,14 @@ include("downsampplot.jl")
 include("verticallyspaced.jl")
 include("spectrogram.jl")
 include("ptplot.jl")
+include("plotting_util.jl")
+include("plotshapes.jl")
 include("rasterplot.jl")
 include("histplot.jl")
+include("stem.jl")
+include("cnmfe.jl")
+include("waveforms.jl")
+include("swarm.jl")
 include("gloss.jl")
 
 function __init__()
