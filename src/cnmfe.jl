@@ -4,6 +4,7 @@ function plot_cnmfe_results!(
     raw::AbstractVector{<:Number},
     denoised::AbstractVector{<:Number},
     deconved::AbstractVector{<:Number};
+    stem_color = "C2",
     spkscale = 1/90,
     addxlabel = true,
     addylabel = true,
@@ -12,7 +13,7 @@ function plot_cnmfe_results!(
     hr = ax.plot(xs, raw, label = "raw")
     hn = ax.plot(xs, denoised, label = "de-noised")
     res = glstem_zeros!(
-        ax, xs, spkscale * deconved, color = "C2", label = "de-convolved"
+        ax, xs, spkscale * deconved, color = stem_color, label = "de-convolved"
     )
 
     addxlabel && ax.set_xlabel("Time (s)")
