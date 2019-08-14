@@ -246,12 +246,13 @@ function plot_example_spectrogram(
     title::Bool = true,
     adjust_lims::Bool = true,
     limscale::Real = 1.35,
-    syll_label_kwargs::Dict = Dict(),
     freq_scalebar_frac = 0.2,
     time_scalebar_frac = 0.05,
+    freq_scalebar_pos = [0, 0.1],
+    time_scalebar_pos = [0.95, 0.6],
     freq_units = "Hz",
     time_units = "s",
-    use_syll_labels::Bool = true,
+    binsize = 512,
     kwargs...
 )
     rspec = resizeable_spectrogram(
@@ -262,6 +263,7 @@ function plot_example_spectrogram(
         clim = clim,
         frange = frange,
         listen_ax = listen_ax,
+        binsize = binsize,
         kwargs...
     );
 
@@ -278,7 +280,7 @@ function plot_example_spectrogram(
             "$(f_scalebar_units)$(f_scalebar_prefix)$freq_units"
         sb_f = matplotlib_scalebar(
             sp_ax.ax, f_scalebar_ax_size, freq_scalebar_label,
-            horizontal = false, loc = "lower right", axes_pos = [0, 0.1], sep = 2,
+            horizontal = false, loc = "lower right", axes_pos = freq_scalebar_pos, sep = 2,
             textprops = Dict("fontsize" => 6)
         )
     else
@@ -293,7 +295,7 @@ function plot_example_spectrogram(
         sb_ms = matplotlib_scalebar(
             sp_ax.ax, t_scalebar_ax_size, time_scalebar_label,
             textfirst = false, loc = "upper right",
-            axes_pos = [0.95, 0.06], textprops = Dict("fontsize" => 6)
+            axes_pos = time_scalebar_pos, textprops = Dict("fontsize" => 6)
         )
     else
         sb_ms = nothing
