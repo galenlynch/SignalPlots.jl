@@ -231,3 +231,164 @@ function empty_or_ordered_bound(a::AbstractArray)
     na = length(a)
     return na == 0 || (na == 2 && a[1] <= a[2])
 end
+
+function plot_example_spectrogram(
+    sp_ax::Axis,
+    song_clip::AbstractVector{<:Number},
+    pre::Number;
+    fs = 30000,
+    clim = [-95, -40],
+    frange = [1000, 8000],
+    listen_ax = Axis{MPL}[],
+    decorate::Bool = true,
+    f_scalebar::Bool = true,
+    t_scalebar::Bool = true,
+    title::Bool = true,
+    adjust_lims::Bool = true,
+    limscale::Real = 1.35,
+    syll_label_kwargs::Dict = Dict(),
+    freq_scalebar_frac = 0.2,
+    time_scalebar_frac = 0.05,
+    freq_units = "Hz",
+    time_units = "s",
+    use_syll_labels::Bool = true,
+    kwargs...
+)
+    rspec = resizeable_spectrogram(
+        sp_ax,
+        song_clip .- mean(song_clip),
+        fs,
+        -pre;
+        clim = clim,
+        frange = frange,
+        listen_ax = listen_ax,
+        kwargs...
+    );
+
+    if title
+        sp_ax.ax.set_title("Example recording")
+    end
+    sp_ax.ax.axis("off")
+
+    if f_scalebar
+        ax_yb, ax_ye = axis_ylim(sp_ax)
+        f_scalebar_ax_size, f_scalebar_units, f_scalebar_prefix =
+            best_scalebar_size(ax_yb, ax_ye, freq_scalebar_frac)
+        freq_scalebar_label  =
+            "$(f_scalebar_units)$(f_scalebar_prefix)$freq_units"
+        sb_f = matplotlib_scalebar(
+            sp_ax.ax, f_scalebar_ax_size, freq_scalebar_label,
+            horizontal = false, loc = "lower right", axes_pos = [0, 0.1], sep = 2,
+            textprops = Dict("fontsize" => 6)
+        )
+    else
+        sb_f = nothing
+    end
+    if t_scalebar
+        ax_xb, ax_xe = axis_xlim(sp_ax)
+        t_scalebar_ax_size, t_scalebar_units, t_scalebar_prefix =
+            best_scalebar_size(ax_xb, ax_xe, time_scalebar_frac)
+        time_scalebar_label  =
+            "$(t_scalebar_units)$(t_scalebar_prefix)$time_units"
+        sb_ms = matplotlib_scalebar(
+            sp_ax.ax, t_scalebar_ax_size, time_scalebar_label,
+            textfirst = false, loc = "upper right",
+            axes_pos = [0.95, 0.06], textprops = Dict("fontsize" => 6)
+        )
+    else
+        sb_ms = nothing
+    end
+
+    if adjust_lims
+        sp_ax.ax.set_ylim([0, frange[2] * limscale])
+    end
+
+    rspec, sb_f, sb_ms
+end
+
+function plot_annotated_spectrogram(
+    sp_ax::Axis,
+    song_clip::AbstractVector{<:Number},
+    pre::Number,
+    aligned_motif_syl_ints::AbstractVector{<:Interval},
+    clipped_other_syl_ints::AbstractVector{<:Interval},
+    motif,
+    other_syll_labels;
+    frange = [0, 12000],
+    motif_patch_height = 0.083,
+    motif_patch_sep = 0.083,
+    motif_patch_color = "#9ecae1",
+    other_syl_patch_color = "#deebf7",
+    other_label_text_color = "0.4",
+    syll_label_kwargs::Dict = Dict(),
+    use_syll_labels::Bool = true,
+    kwargs...
+)
+    rspec, sb_f, sb_ms = plot_example_spectrogram(
+        sp_ax, song_clip, pre;
+        frange = frange, kwargs...
+    )
+
+    if !(isempty(aligned_motif_syl_ints) && isempty(clipped_other_syl_ints))
+        # Syllable labels
+        f_height = frange[2] * motif_patch_height
+        f_sep = frange[2] * motif_patch_sep
+        f_center = frange[2] + f_sep + f_height / 2
+        pcm = make_patch_collection(
+            aligned_motif_syl_ints;
+            height = f_height,
+            ycenter = f_center,
+            facecolor = motif_patch_color,
+            clip_on = false
+        )
+
+        sp_ax.ax.add_collection(pcm)
+
+        label_f = f_center + f_height
+        if use_syll_labels
+            mth = add_labels(
+                sp_ax.ax,
+                midpoint.(aligned_motif_syl_ints),
+                motif,
+                label_f;
+                syll_label_kwargs...
+            )
+        else
+            mth = nothing
+        end
+
+        if !isempty(clipped_other_syl_ints)
+            if use_syll_labels
+                oth = add_labels(
+                    sp_ax.ax,
+                    midpoint.(clipped_other_syl_ints),
+                    other_syll_labels,
+                    label_f;
+                    color = other_label_text_color,
+                    syll_label_kwargs...
+                )
+            else
+                oth = nothing
+            end
+            pco = make_patch_collection(
+                clipped_other_syl_ints;
+                height = f_height,
+                ycenter = f_center,
+                facecolor = other_syl_patch_color,
+                clip_on = false
+            )
+
+            sp_ax.ax.add_collection(pco)
+        else
+            pco = nothing
+            oth = nothing
+        end
+    else
+        pcm = nothing
+        mth = nothing
+        pco = nothing
+        oth = nothing
+    end
+
+    rspec, sb_f, sb_ms, pcm, pco, mth, oth
+end
