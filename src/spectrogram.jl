@@ -191,7 +191,7 @@ function update_artists(
     imartist = Artist{P}(
         ra.baseinfo.ax.ax.imshow(
             db;
-            origin = "bottom",
+            origin = "lower",
             cmap = ra.cmap,
             extent = extent,
             interpolation = "nearest",
@@ -277,7 +277,7 @@ function plot_example_spectrogram(
         f_scalebar_ax_size, f_scalebar_units, f_scalebar_prefix =
             best_scalebar_size(ax_yb, ax_ye, freq_scalebar_frac)
         freq_scalebar_label  =
-            "$(f_scalebar_units)$(f_scalebar_prefix)$freq_units"
+            "$(f_scalebar_units) $(f_scalebar_prefix)$freq_units"
         sb_f = matplotlib_scalebar(
             sp_ax.ax, f_scalebar_ax_size, freq_scalebar_label,
             horizontal = false, loc = "lower right", axes_pos = freq_scalebar_pos, sep = 2,
@@ -291,7 +291,7 @@ function plot_example_spectrogram(
         t_scalebar_ax_size, t_scalebar_units, t_scalebar_prefix =
             best_scalebar_size(ax_xb, ax_xe, time_scalebar_frac)
         time_scalebar_label  =
-            "$(t_scalebar_units)$(t_scalebar_prefix)$time_units"
+            "$(t_scalebar_units) $(t_scalebar_prefix)$time_units"
         sb_ms = matplotlib_scalebar(
             sp_ax.ax, t_scalebar_ax_size, time_scalebar_label,
             textfirst = false, loc = "upper right",

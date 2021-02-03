@@ -11,7 +11,8 @@ function plot_vertical_spacing(
     listen_ax::Vector{B} = [ax],
     y_spacing::Real = -1, # automatic if less than zero
     linewidth::Number = 2,
-    toplevel::Bool = true
+    toplevel::Bool = true,
+    colorargs = nothing
 ) where {B<:Axis, E, D<:AbstractDynamicDownsampler{E}, A<:AbstractVector{D}}
     nts = length(ts)
     if y_spacing < 0
@@ -28,10 +29,9 @@ function plot_vertical_spacing(
         y_transform = make_shifter(offset)
         mts[i] = MappedDynamicDownsampler(ts[i], y_transform)
     end
-    ad, patchartists = plot_multi_patch(
-        ax, mts, listen_ax;
-        linewidth = linewidth, toplevel = false
-    )
+    ad, patchartists = plot_multi_patch(ax, mts, listen_ax;
+                                        linewidth = linewidth,
+                                        toplevel = false, colorargs)
     if toplevel
         xb = extrema_red(time_interval.(mts))
         yb = (extrema(mts[1])[1], extrema(mts[end])[2])

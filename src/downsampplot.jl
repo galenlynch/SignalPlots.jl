@@ -15,6 +15,10 @@ function downsamp_patch(
     return rpatch
 end
 
+def_colorargs(::Nothing, indices) = ["C$n" for n in indices]
+def_colorargs(v::AbstractVector, ::Any) = v
+def_colorargs(v, indices) = fill(v, length(indices))
+
 """
     plot_multi_patch
 
@@ -25,11 +29,12 @@ function plot_multi_patch(
     dts::AbstractVector{T},
     listen_ax::Vector{A} = [ax];
     toplevel = true,
+    colorargs = nothing,
     plotkwargs...
 ) where {P<:PlotLib, A<:Axis{P}, T<:AbstractDynamicDownsampler}
     na = length(dts)
-    indicies = mod.(0:(na - 1), 10) # for Python consumption, base zero
-    colorargs = ["C$n" for n in indicies]
+    indices = mod.(0:(na - 1), 10) # for Python consumption, base zero
+    colorargs = def_colorargs(colorargs, indices)
     @compat patchartists = Vector{ResizeablePatch{T,P}}(undef, na)
     for i in 1:na
         patchartists[i] = downsamp_patch(ax, dts[i], colorargs[i]; plotkwargs...)
