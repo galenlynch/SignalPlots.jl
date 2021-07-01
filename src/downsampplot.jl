@@ -37,7 +37,8 @@ function plot_multi_patch(
     colorargs = def_colorargs(colorargs, indices)
     @compat patchartists = Vector{ResizeablePatch{T,P}}(undef, na)
     for i in 1:na
-        patchartists[i] = downsamp_patch(ax, dts[i], colorargs[i]; plotkwargs...)
+        patchartists[i] = downsamp_patch(ax, dts[i]; color = colorargs[i],
+                                         plotkwargs...)
     end
     ad = ArtDirector(patchartists)
     connect_callbacks(ax, ad, listen_ax; toplevel = toplevel)
@@ -179,7 +180,6 @@ end
 function make_dummy_line(
     ax::A, plotargs...;
     name = nothing,
-    pen = nothing,
     plotkwargs...
 ) where
     {P<:MPL, A<:Axis{P}}
@@ -188,17 +188,7 @@ function make_dummy_line(
         Dict{Symbol, String}(),
         Dict(:label => name)
     )
-    color_karg = ifelse(
-        pen == nothing,
-        Dict{Symbol, String}(),
-        Dict(:color => pen)
-    )
     return Artist{P}(
-        ax.ax.plot(
-            0, 0, plotargs...;
-            label_karg...,
-            color_karg...,
-            plotkwargs...
-        )[1]
+        ax.ax.plot(0, 0, plotargs...; label_karg..., plotkwargs...)[1]
     )
 end
