@@ -1,7 +1,7 @@
 name = "GLPlotting"
 uuid = "1f2ffea9-73bd-5d04-b319-71eab08f4cf7"
 authors = ["Galen Lynch <galen.lynch@gmail.com>"]
-version = "0.1.5"
+version = "0.1.6"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"

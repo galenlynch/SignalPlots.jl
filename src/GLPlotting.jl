@@ -65,6 +65,7 @@ export
 const DownsampCurve = PyNULL()
 const DownsampImage = PyNULL()
 const py_gc = PyNULL()
+const mpl = PyNULL()
 
 include("plotlibs.jl")
 include("util.jl")
@@ -123,11 +124,12 @@ function __init__()
         end
     copy!(DownsampImage, temp_downsampimage)
 
-    grayalpha = matplotlib.colors.LinearSegmentedColormap.from_list(
+    copy!(mpl, pyimport("matplotlib"))
+    grayalpha = mpl.colors.LinearSegmentedColormap.from_list(
         "grayalpha",
         [(0,0,0,0), (0,0,0,1)]
     )
-    matplotlib.colormaps.register(grayalpha, name="grayalpha")
+    mpl.colormaps.register(grayalpha, name="grayalpha")
 
     copy!(py_gc, pyimport("gc"))
 end
