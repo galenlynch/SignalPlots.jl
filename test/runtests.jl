@@ -7,6 +7,7 @@ using PythonPlot: colorbar, gca, plotclose, pyplot, subplots
 using SignalPlots
 
 const app = QtApp()
+const HEADLESS = get(ENV, "CI", "") != "" || get(ENV, "HEADLESS", "") != ""
 
 const npt = 10000
 const A = rand(npt)
@@ -41,7 +42,7 @@ const ds = CachingStftPsd(A, wl, fs)
             toplevel = false,
         )
 
-        app(qtplt)
+        HEADLESS || app(qtplt)
 
     end
 
@@ -65,7 +66,7 @@ const ds = CachingStftPsd(A, wl, fs)
         qtax = Axis{PQTG}(vb)
 
         downsamp_patch(qtax, dts)
-        app(vb)
+        HEADLESS || app(vb)
     end
 
     @testset "resizeableartists" begin
@@ -106,7 +107,7 @@ const ds = CachingStftPsd(A, wl, fs)
 
         ra = point_boxes(qtax, pttimes, ptamps, 0.01, 0.0)
 
-        app(qtplt)
+        HEADLESS || app(qtplt)
 
         qtplt = pg.plot()
         vb = get_viewbox(qtplt)
@@ -115,7 +116,7 @@ const ds = CachingStftPsd(A, wl, fs)
         pttimes_2 = rand(20)
         pts_2 = VariablePoints(pttimes_2, ptamps)
         ad, ram = point_boxes_multi(qtax, [pts_1, pts_2], 0.01, [0, 1])
-        app(qtplt)
+        HEADLESS || app(qtplt)
     end
 
     @testset "boxplot_mpl" begin
@@ -131,10 +132,9 @@ const ds = CachingStftPsd(A, wl, fs)
             pttimes_2 = rand(20)
             pts_2 = VariablePoints(pttimes_2, ptamps)
             ad, ram = point_boxes_multi(ax, [pts_1, pts_2], 0.01, [0, 1])
-            pyplot.show()
-        catch
+            HEADLESS || pyplot.show()
+        finally
             plotclose()
-            rethrow()
         end
     end
 
@@ -144,10 +144,9 @@ const ds = CachingStftPsd(A, wl, fs)
         ax = Axis{MPL}(ax)
         try
             rp = downsamp_patch(ax, dts)
-            pyplot.show()
-        catch
+            HEADLESS || pyplot.show()
+        finally
             plotclose()
-            rethrow()
         end
     end
 
@@ -176,9 +175,9 @@ const ds = CachingStftPsd(A, wl, fs)
             qtartists = plot_vertical_spacing(qtax, dynamic_tss)
 
             artists = plot_vertical_spacing(ax, dynamic_tss)
-            pyplot.show()
-        catch
-            rethrow()
+            HEADLESS || pyplot.show()
+        finally
+            plotclose()
         end
     end
 
@@ -191,36 +190,33 @@ const ds = CachingStftPsd(A, wl, fs)
         qtax = Axis{PQTG}(vb)
 
         rs = resizeable_spectrogram(qtax, B, fs)
-        app(qtplt)
+        HEADLESS || app(qtplt)
 
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
             rspec = resizeable_spectrogram(ax, B, fs)
-            pyplot.show()
-        catch
+            HEADLESS || pyplot.show()
+        finally
             plotclose()
-            rethrow()
         end
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
             rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13])
             colorbar(rspec.baseinfo.artists[1].artist)
-            pyplot.show()
-        catch
+            HEADLESS || pyplot.show()
+        finally
             plotclose()
-            rethrow()
         end
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
             rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13], clim = [-20, 0])
             colorbar(rspec.baseinfo.artists[1].artist)
-            pyplot.show()
-        catch
+            HEADLESS || pyplot.show()
+        finally
             plotclose()
-            rethrow()
         end
     end
 end
