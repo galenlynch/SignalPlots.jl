@@ -1,6 +1,15 @@
-const def_line_colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
-                         "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-                         "#bcbd22", "#17becf"]
+const def_line_colors = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
 
 """
     plot_spacing(extents[, scale_factor = 1.2])
@@ -9,20 +18,17 @@ Calculate the spacing between dataseries for plotting, which is the mean of the
 extents times an optional scale factor.
 """
 function plot_spacing(
-    extents::A, scale_factor::Number = 1.2
-) where {E<:Number, A<:AbstractVector{E}}
+    extents::A,
+    scale_factor::Number = 1.2,
+) where {E<:Number,A<:AbstractVector{E}}
     return scale_factor * mean(extents)
 end
 
-function plot_spacing(
-    extents::A, args...
-) where {T<:NTuple{2, Number}, A<:AbstractVector{T}}
+function plot_spacing(extents::A, args...) where {T<:NTuple{2,Number},A<:AbstractVector{T}}
     plot_spacing(map((t) -> t[2] - t[1], extents), args...)
 end
 
-function plot_spacing(
-    series::A, args...
-) where {E<:AbstractVector, A<:AbstractVector{E}}
+function plot_spacing(series::A, args...) where {E<:AbstractVector,A<:AbstractVector{E}}
     return plot_spacing(extent(series), args...)
 end
 
@@ -36,78 +42,76 @@ function plot_offsets end
 function plot_offsets(
     n_line::Integer,
     spacing::A,
-    offset::B = A(0)
-) where {A<:Number, B<:Number}
+    offset::B = A(0),
+) where {A<:Number,B<:Number}
     T = promote_type(A, B)
     if spacing == 0
         out = fill(T(offset), n_line)
     else
-        out = convert(Vector{T}, spacing * (0:(n_line - 1)) .+ offset)
+        out = convert(Vector{T}, spacing * (0:(n_line-1)) .+ offset)
     end
     return out
 end
 function plot_offsets(
     series::A,
     offset::Number = 0,
-    args...
-) where {E<:AbstractVector, A<:AbstractVector{E}}
+    args...,
+) where {E<:AbstractVector,A<:AbstractVector{E}}
     n = length(series)
     spacing = plot_spacing(series, args...)
     return plot_offsets(n, spacing, offset)
 end
-function plot_offsets(
-    ::A,
-    args...
-) where {E<:Number, A<:AbstractVector{E}}
+function plot_offsets(::A, args...) where {E<:Number,A<:AbstractVector{E}}
     return E[0]
 end
 
-function ax_pix_width(ax::A) where {P<:MPL, A<:Axis{P}}
-    fig = ax.ax.figure::PyPlot.Figure
-    scale = fig.dpi_scale_trans.inverted()::PyObject
-    bbox = ax.ax.get_window_extent().transformed(scale)::PyObject
+function ax_pix_width(ax::A) where {P<:MPL,A<:Axis{P}}
+    fig = ax.ax.figure
+    scale = fig.dpi_scale_trans.inverted()
+    bbox = ax.ax.get_window_extent().transformed(scale)
 
-    width = bbox.width::Float64
-    dpi = fig.dpi::Union{Int, Float64}
+    width = pyconvert(Float64, bbox.width)
+    dpi = pyconvert(Float64, fig.dpi)
 
     return ceil(Int, width * dpi)
 end
 
 function ax_pix_width(a::Axis{PQTG})
-    sg = a.ax.screenGeometry()::PyObject
-    sg.width()::Int
+    sg = a.ax.screenGeometry()
+    pyconvert(Int, sg.width())
 end
 
-function axis_limits(ax::A) where {P<:MPL, A<:Axis{P}}
-    ax.ax.viewLim::PyObject
+function axis_limits(ax::A) where {P<:MPL,A<:Axis{P}}
+    ax.ax.viewLim
 end
 
-function axis_xlim(ax::A) where {P<:MPL, A<:Axis{P}}
+function axis_xlim(ax::A) where {P<:MPL,A<:Axis{P}}
     bbox = axis_limits(ax)
-    return (bbox.xmin::Float64, bbox.xmax::Float64)
+    return (pyconvert(Float64, bbox.xmin), pyconvert(Float64, bbox.xmax))
 end
 
 function axis_xlim(a::Axis{MPL}, xb, xe)
     a.ax.set_xlim((xb, xe))
     nothing
 end
-axis_xlim(a::Axis{MPL}, l::NTuple{2, <:Real}) = axis_xlim(a, l[1], l[2])
+axis_xlim(a::Axis{MPL}, l::NTuple{2,<:Real}) = axis_xlim(a, l[1], l[2])
 
-function axis_ylim(ax::A) where {P<:MPL, A<:Axis{P}}
+function axis_ylim(ax::A) where {P<:MPL,A<:Axis{P}}
     bbox = axis_limits(ax)
-    return (bbox.ymin::Float64, bbox.ymax::Float64)
+    return (pyconvert(Float64, bbox.ymin), pyconvert(Float64, bbox.ymax))
 end
 
 function axis_ylim(a::Axis{MPL}, yb, ye)
     a.ax.set_ylim((yb, ye))
     nothing
 end
-axis_ylim(a::Axis{MPL}, l::NTuple{2, <:Real}) = axis_ylim(a, l[1], l[2])
+axis_ylim(a::Axis{MPL}, l::NTuple{2,<:Real}) = axis_ylim(a, l[1], l[2])
 
 function axis_limits(a::Axis{PQTG})
     vrange = a.ax.viewRange()
-    r = convert(Array{Float64, 2}, vrange)
-    return ((r[1,1], r[1,2]), (r[2,1], r[2,2]))
+    xr = pyconvert(Vector{Float64}, vrange[0])
+    yr = pyconvert(Vector{Float64}, vrange[1])
+    return ((xr[1], xr[2]), (yr[1], yr[2]))
 end
 
 function axis_xlim(a::Axis{PQTG})
@@ -121,27 +125,27 @@ function axis_ylim(a::Axis{PQTG})
 end
 
 function setlims(ax::Axis{MPL}, xb, xe, yb, ye)
-        ax.ax.set_xlim([xb, xe])
-        ax.ax.set_ylim([yb, ye])
+    ax.ax.set_xlim([xb, xe])
+    ax.ax.set_ylim([yb, ye])
 end
 
 function setlims(ax::Axis{PQTG}, xb, xe, yb, ye)
-        ax.ax.setXRange(xb, xe)
-        ax.ax.setYRange(yb, ye)
+    ax.ax.setXRange(xb, xe)
+    ax.ax.setYRange(yb, ye)
 end
 
 update_ax(ax::Axis{MPL}) = ax.ax.figure.canvas.draw_idle()
 update_ax(ax::Axis{PQTG}) = nothing
 
-function plotitem_to_ax(py::PyObject)
-    vb = get_viewbox(py)::PyObject
+function plotitem_to_ax(py::Py)
+    vb = get_viewbox(py)
     Axis{PQTG}(vb)
 end
 
 function kill_figure(f)
     f.clf()
-    PyPlot.close(f)
+    PythonPlot.plotclose(f)
     py_gc.collect()
 end
 
-remove(ax::Axis{PQTG}, obj::PyObject) = ax.ax.removeItem(obj)::Nothing
+remove(ax::Axis{PQTG}, obj::Py) = ax.ax.removeItem(obj)

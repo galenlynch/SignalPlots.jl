@@ -1,43 +1,43 @@
 function matplotlib_scalebar(
-    ax::PyObject, size::Number, label::AbstractString;
+    ax::Py,
+    size::Number,
+    label::AbstractString;
     textfirst::Bool = true,
     loc = 4, # Refer to matplotlib loc documentation
     axes_pos::AbstractArray = [0, 0], # In axes coordinates (not data)
     horizontal::Bool = true,
     color = "k",
-    textprops::Union{Nothing, Dict{String, <:Any}} = nothing,
+    textprops::Union{Nothing,Dict{String,<:Any}} = nothing,
     sep::Real = 2, # Separation between text and bar
-    trans::Symbol = :transAxes
+    trans::Symbol = :transAxes,
 )
     # Make the bar
     dims = horizontal ? (size, 0) : (0, size)
-    art = PyPlot.matplotlib.patches.Rectangle((0,0), dims...; ec = color)
+    art = PythonPlot.matplotlib.patches.Rectangle((0, 0), dims...; ec = color)
 
     # Make the bar scale with data axes
-    atb = PyPlot.matplotlib.offsetbox.AuxTransformBox(ax.transData)
+    atb = PythonPlot.matplotlib.offsetbox.AuxTransformBox(ax.transData)
     atb.add_artist(art)
 
     # Make the text
-    ta = PyPlot.matplotlib.offsetbox.TextArea(
-        label; textprops = textprops
-    )
+    ta = PythonPlot.matplotlib.offsetbox.TextArea(label; textprops = textprops)
 
     # Join the bar and text together
     if horizontal
-        packer = PyPlot.matplotlib.offsetbox.VPacker
+        packer = PythonPlot.matplotlib.offsetbox.VPacker
     else
-        packer = PyPlot.matplotlib.offsetbox.HPacker
+        packer = PythonPlot.matplotlib.offsetbox.HPacker
     end
     childs = textfirst ? [ta, atb] : [atb, ta]
     p = packer(children = childs, align = "center", pad = 0, sep = sep)
 
     # Anchor them
-    sb = PyPlot.matplotlib.offsetbox.AnchoredOffsetbox(
+    sb = PythonPlot.matplotlib.offsetbox.AnchoredOffsetbox(
         loc,
         child = p,
         bbox_to_anchor = axes_pos,
         bbox_transform = getproperty(ax, trans),
-        frameon = false
+        frameon = false,
     )
 
     # Add them to the axis
@@ -46,7 +46,7 @@ function matplotlib_scalebar(
     sb
 end
 
-nearest_multiple(x, b::T) where T<:Integer = b * round(T, x / b)
+nearest_multiple(x, b::T) where {T<:Integer} = b * round(T, x / b)
 nearest_multiple(x, b) = b * round(x / b)
 
 function prefix(pow10)
@@ -59,10 +59,7 @@ function prefix(pow10)
         range == -1 ? "m" :
         range == 0 ? "" :
         range == 1 ? "k" :
-        range == 2 ? "M" :
-        range == 3 ? "G" :
-        range == 4 ? "T" :
-        range == 5 ? "P" : "?"
+        range == 2 ? "M" : range == 3 ? "G" : range == 4 ? "T" : range == 5 ? "P" : "?"
 end
 
 "Adjust the fraction away from 0 and 1, if possible, otherwise return `nothing`"
@@ -71,7 +68,7 @@ function edgefix(frac, base_offset)
     adjusted = ifelse(
         (adjustment_dir != 0) & (base_offset >= 0),
         nothing,
-        base_offset * adjustment_dir + frac
+        base_offset * adjustment_dir + frac,
     )
 end
 
@@ -108,7 +105,7 @@ function best_scalebar_size(
     axis_unit_pow10::Integer = 0;
     bases = [100, 50, 10, 5, 2, 1],
     base_penalties = [0, 5, 10, 20, 30, 40],
-    target_frac_penalty = 30
+    target_frac_penalty = 30,
 )
     @argcheck 0 < target_frac < 1
     @argcheck length(bases) == length(base_penalties)
@@ -145,30 +142,34 @@ function best_scalebar_size(
     scalebar_ax_size, scalebar_units, scalebar_prefix
 end
 
-function make_lc_vertical_coords(xs::AbstractVector{<:AbstractVector{<:Number}}, pitch, offset, height)
+function make_lc_vertical_coords(
+    xs::AbstractVector{<:AbstractVector{<:Number}},
+    pitch,
+    offset,
+    height,
+)
     nrep = length(xs)
     nsp = length.(xs)
     total_sp = sum(nsp)
-    @compat outs = Array{Float32, 3}(undef, total_sp, 2, 2)
+    outs = Array{Float32,3}(undef, total_sp, 2, 2)
     pos = 1
     for repno = 1:nrep
         this_nsp = nsp[repno]
         this_ycenter = offset + (repno - 1) * pitch
-        outs[pos:(pos + this_nsp - 1), :, :] = vertical_line_coords(
-            xs[repno], this_ycenter, height
-        )
+        outs[pos:(pos+this_nsp-1), :, :] =
+            vertical_line_coords(xs[repno], this_ycenter, height)
         pos += this_nsp
     end
     outs
 end
 
 function make_lc_coords(
-    xs::Union{AbstractVector, AbstractRange},
-    ys::AbstractVector{<:AbstractVector{<:Number}}
+    xs::Union{AbstractVector,AbstractRange},
+    ys::AbstractVector{<:AbstractVector{<:Number}},
 )
     nrep = length(ys)
     nbasis = length(xs)
-    @compat out = Array{Float32, 3}(undef, nrep, nbasis, 2)
+    out = Array{Float32,3}(undef, nrep, nbasis, 2)
     out[:, :, 1] .= reshape(xs, 1, nbasis)
     for repno = 1:nrep
         out[repno, :, 2] = ys[repno]
@@ -176,13 +177,10 @@ function make_lc_coords(
     out
 end
 
-function make_lc_coords(
-    xs::Union{AbstractVector, AbstractRange},
-    ys::AbstractMatrix
-)
+function make_lc_coords(xs::Union{AbstractVector,AbstractRange}, ys::AbstractMatrix)
     nrep = size(ys, 2)
     nbasis = length(xs)
-    @compat out = Array{Float32, 3}(undef, nrep, nbasis, 2)
+    out = Array{Float32,3}(undef, nrep, nbasis, 2)
     out[:, :, 1] .= reshape(xs, 1, nbasis)
     pys = permutedims(ys)
     out[:, :, 2] .= ifelse.(ismissing.(pys), NaN, pys)
@@ -191,11 +189,11 @@ end
 
 function vertical_line_coords(xs::AbstractVector{<:Number}, ycenter, height = 1)
     nx = length(xs)
-    outs = Array{Float64, 3}(undef, nx, 2, 2)
+    outs = Array{Float64,3}(undef, nx, 2, 2)
     half_height = height / 2
     y_high = ycenter + half_height
     y_low = ycenter - half_height
-    @inbounds @simd for i in 1:nx
+    @inbounds @simd for i = 1:nx
         outs[i, :, 1] .= xs[i]
         outs[i, 1, 2] = y_high
         outs[i, 2, 2] = y_low
@@ -207,46 +205,44 @@ function make_patch_collection(
     ints::AbstractVector{<:AbstractVector};
     height = 1,
     ycenters = 1:length(ints),
-    kwargs...
+    kwargs...,
 )
     nrep = length(ints)
     nint = length.(ints)
     nint_total = sum(nint)
-    rects = Vector{PyObject}(undef, nint_total)
+    rects = Vector{Py}(undef, nint_total)
     pos = 1
     for (i, int_rep) in enumerate(ints)
-        rects[pos:(pos + nint[i] - 1)] =
-            make_rect_patches(int_rep, ycenters[i], height)
+        rects[pos:(pos+nint[i]-1)] = make_rect_patches(int_rep, ycenters[i], height)
         pos += nint[i]
     end
-    PyPlot.matplotlib.collections.PatchCollection(
-        rects; match_original = false, kwargs...
-    )
+    PythonPlot.matplotlib.collections.PatchCollection(rects; match_original = false, kwargs...)
 end
 
 function make_patch_collection(
-    ints::AbstractVector{<:Union{Interval, NTuple{2, <:Number}}};
+    ints::AbstractVector{<:Union{Interval,NTuple{2,<:Number}}};
     height = 1,
     ycenter = 1,
-    kwargs...
+    kwargs...,
 )
-    PyPlot.matplotlib.collections.PatchCollection(
+    PythonPlot.matplotlib.collections.PatchCollection(
         make_rect_patches(ints, ycenter, height);
-        match_original = false, kwargs...
+        match_original = false,
+        kwargs...,
     )
 end
 
 function add_labels(
-    ax::PyObject,
+    ax::Py,
     xcenters::AbstractVector{<:Number},
     labelstrs::AbstractVector{<:AbstractString},
     ybase::Real,
     ha = "center",
     va = "bottom";
-    kwargs...
+    kwargs...,
 )
     nx = length(xcenters)
-    @compat th = Vector{PyObject}(undef, nx)
+    th = Vector{Py}(undef, nx)
     for (i, x) in enumerate(xcenters)
         th[i] = ax.text(x, ybase, labelstrs[i]; ha = ha, va = va, kwargs...)
     end

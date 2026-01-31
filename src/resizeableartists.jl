@@ -2,53 +2,45 @@
 Base type for resizeable artists, must implement a setdata method and have a
 baseinfo field"
 """
-abstract type ResizeableArtist{E<:AbstractDynamicDownsampler, P<:PlotLib} end
+abstract type ResizeableArtist{E<:AbstractDynamicDownsampler,P<:PlotLib} end
 
 mutable struct RABaseInfo{P<:PlotLib}
     ax::Axis{P}
     artists::Vector{Artist{P}}
-    datalimx::NTuple{2, Float64}
-    datalimy::NTuple{2, Float64}
+    datalimx::NTuple{2,Float64}
+    datalimy::NTuple{2,Float64}
     threshdiff::Float64
     lastlimwidth::Float64
     lastlimcenter::Float64
 
     function RABaseInfo{P}(
-    ax::Axis{P},
-    artists::Vector{Artist{P}},
-    datalimx::NTuple{2, Float64},
-    datalimy::NTuple{2, Float64},
-    threshdiff::Float64 = 0.0,
-    lastlimwidth::Float64 = 0.0,
-    lastlimcenter::Float64 = 0.0
-) where P<:PlotLib
-        return new(
-            ax,
-            artists,
-            datalimx,
-            datalimy,
-            threshdiff,
-            lastlimwidth,
-            lastlimcenter
-        )
+        ax::Axis{P},
+        artists::Vector{Artist{P}},
+        datalimx::NTuple{2,Float64},
+        datalimy::NTuple{2,Float64},
+        threshdiff::Float64 = 0.0,
+        lastlimwidth::Float64 = 0.0,
+        lastlimcenter::Float64 = 0.0,
+    ) where {P<:PlotLib}
+        return new(ax, artists, datalimx, datalimy, threshdiff, lastlimwidth, lastlimcenter)
     end
 end
 
 function RABaseInfo(
     ax::Axis{P},
     a::AbstractVector{Artist{P}},
-    limx::NTuple{2, Real},
-    limy::NTuple{2, Real}
-) where P<:PlotLib
+    limx::NTuple{2,Real},
+    limy::NTuple{2,Real},
+) where {P<:PlotLib}
     return RABaseInfo{P}(
         ax,
         a,
-        convert(NTuple{2, Float64}, limx),
-        convert(NTuple{2, Float64}, limy)
+        convert(NTuple{2,Float64}, limx),
+        convert(NTuple{2,Float64}, limy),
     )
 end
 
-function RABaseInfo(ax::Axis{P}, artist::Artist{P}, args...) where P<:PlotLib
+function RABaseInfo(ax::Axis{P}, artist::Artist{P}, args...) where {P<:PlotLib}
     return RABaseInfo(ax, [artist], args...)
 end
 
@@ -60,12 +52,12 @@ ParallelSpeed(::Type) = ParallelSlow()
 ParallelSpeed(::D) where {D} = ParallelSpeed(D)
 
 function ParallelSpeed(
-    ::Type{D}
-) where {E<:AbstractDynamicDownsampler, D<:ResizeableArtist{E}}
+    ::Type{D},
+) where {E<:AbstractDynamicDownsampler,D<:ResizeableArtist{E}}
     ParallelSpeed(E)
 end
 
-function ParallelSpeed(::Type{M}) where {D, M<:MappedDynamicDownsampler{<:Any, D}}
+function ParallelSpeed(::Type{M}) where {D,M<:MappedDynamicDownsampler{<:Any,D}}
     return ParallelSpeed(D)
 end
 
@@ -102,10 +94,7 @@ end
 function artist_is_visible(ra::ResizeableArtist, xstart, xend, ystart, yend)
     limx = ra.baseinfo.datalimx
     limy = ra.baseinfo.datalimy
-    return artist_is_visible(
-        xstart, xend, ystart, yend,
-        limx[1], limx[2], limy[1], limy[2]
-    )
+    return artist_is_visible(xstart, xend, ystart, yend, limx[1], limx[2], limy[1], limy[2])
 end
 
 function artist_should_redraw(
@@ -113,7 +102,7 @@ function artist_should_redraw(
     xstart,
     xend,
     limwidth = xend - xstart,
-    limcenter = (xend + xstart) / 2
+    limcenter = (xend + xstart) / 2,
 )
     (ystart, yend) = axis_ylim(ra.baseinfo.ax)
     if artist_is_visible(ra, xstart, xend, ystart, yend)
@@ -151,9 +140,7 @@ function redraw(ra::ResizeableArtist, xstart, xend, limwidth, limcenter)
     update_ax(ra.baseinfo.ax)
 end
 
-function compress_px(
-    ra::ResizeableArtist, xstart, xend, px_width::T
-) where {T<:Integer}
+function compress_px(ra::ResizeableArtist, xstart, xend, px_width::T) where {T<:Integer}
     (xb, xe) = ra.baseinfo.datalimx
     if xb > xstart || xe < xend
         x_s_b = max(xb, xstart)
@@ -200,13 +187,11 @@ function update_plotdata(
     res,
     jobchannel::RemoteChannel,
     datachannel::RemoteChannel,
-    ::AbstractVector{ParallelFast}
+    ::AbstractVector{ParallelFast},
 )
     na = length(ras)
-    @compat func_calls = Vector{FuncCall}(undef, na)
-    @. func_calls = plotdata_fnc(
-        downsampler(ras), xstart, xend, pixwidths, res
-    )
+    func_calls = Vector{FuncCall}(undef, na)
+    @. func_calls = plotdata_fnc(downsampler(ras), xstart, xend, pixwidths, res)
     for job in enumerate(func_calls)
         put!(jobchannel, job)
     end
@@ -218,12 +203,15 @@ function update_plotdata(
     end
 end
 
-function plotdata_fnc(cdts::D, xstart, xend, pixwidth, res) where {D<:AbstractDynamicDownsampler}
+function plotdata_fnc(
+    cdts::D,
+    xstart,
+    xend,
+    pixwidth,
+    res,
+) where {D<:AbstractDynamicDownsampler}
     args = remote_plotdata_args(cdts)
-    return FuncCall(
-        remote_make_plotdata,
-        xstart, xend, pixwidth, res, D, args...
-    )
+    return FuncCall(remote_make_plotdata, xstart, xend, pixwidth, res, D, args...)
 end
 
 function remote_plotdata_args(mds::MappedDynamicDownsampler)
@@ -232,9 +220,13 @@ function remote_plotdata_args(mds::MappedDynamicDownsampler)
 end
 
 function remote_make_plotdata(
-    xstart, xend, pixwidth, res
-    ::Type{M}, mapfnc, args_base
-) where {D<:AbstractDynamicDownsampler, M<:MappedDynamicDownsampler{<:Any, D}}
+    xstart,
+    xend,
+    pixwidth,
+    res::Type{M},
+    mapfnc,
+    args_base,
+) where {D<:AbstractDynamicDownsampler,M<:MappedDynamicDownsampler{<:Any,D}}
     xpt, ypt = remote_make_plotdata(xstart, xend, pixwidth, res, D, args_base...)
     ymapped = mapfnc(ypt)
     return (xpt, ymapped)
@@ -242,18 +234,18 @@ end
 
 to_curve(ra::ResizeableArtist) = ra.baseinfo.artists[1].artist
 
-function remove(ax::Axis{PQTG}, ras::AbstractVector{<:ResizeableArtist{<:Any, PQTG}})
+function remove(ax::Axis{PQTG}, ras::AbstractVector{<:ResizeableArtist{<:Any,PQTG}})
     for ra in ras
         remove(ax, ra)
     end
 end
 
-function remove(ax::Axis{PQTG}, ra::ResizeableArtist{<:Any, PQTG})
+function remove(ax::Axis{PQTG}, ra::ResizeableArtist{<:Any,PQTG})
     ax.ax.removeItem(to_curve(ra))
     nothing
 end
 
-function remove(ax::Axis{MPL}, ra::ResizeableArtist{<:Any, MPL})
+function remove(ax::Axis{MPL}, ra::ResizeableArtist{<:Any,MPL})
     ax == ra.baseinfo.ax || throw(ArgumentError("Axis did not match"))
     for a in ra.baseinfo.artists
         a.artist.remove()

@@ -1,4 +1,4 @@
-function glstem!(
+function stem!(
     ax,
     xs,
     ys,
@@ -7,7 +7,7 @@ function glstem!(
     linestyle = "-.",
     plotmarker = "o",
     label = "",
-    kwargs...
+    kwargs...,
 )
     markerline, stemlines, baseline = ax.stem(
         xs,
@@ -15,7 +15,7 @@ function glstem!(
         "$(color)$(linestyle)",
         "$(color)$(plotmarker)",
         label = label,
-        kwargs...
+        kwargs...,
     )
     baseline.set_xdata(xbnds)
     baseline.set_color(color)
@@ -23,7 +23,7 @@ function glstem!(
     markerline, stemlines, baseline
 end
 
-function glstem_zeros!(
+function stem_zeros!(
     ax,
     xs,
     ys,
@@ -31,19 +31,19 @@ function glstem_zeros!(
     color = "C0",
     linestyle = "-.",
     plotmarker = "o",
-    kwargs...
+    kwargs...,
 )
     nzmask = ys .!= 0
     if any(nzmask)
-        glstem!(
+        stem!(
             ax,
             xs[nzmask],
             ys[nzmask],
             xbnds;
             color = color,
             linestyle = linestyle,
-            plotmarker= plotmarker,
-            kwargs...
+            plotmarker = plotmarker,
+            kwargs...,
         )
     else
         ax.plot(xbnds, [0, 0]; color = color, kwargs...)

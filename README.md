@@ -1,13 +1,7 @@
-# GLPlotting
+# SignalPlots [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://galenlynch.github.io/SignalPlots.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://galenlynch.github.io/SignalPlots.jl/dev/) [![Build Status](https://github.com/galenlynch/SignalPlots.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/galenlynch/SignalPlots.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/galenlynch/SignalPlots.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/galenlynch/SignalPlots.jl)
 
-A set of utilities to plot with matplotlib in Julia
+Matplotlib and PyQtGraph visualization utilities for neuroscience data.
 
-top level functions: `resizeable_spectrogram`, `downsamp_patch`, `plot_multi_patch`, `plot_vertical_spacing`
+## Citing
 
-Requires [py_resizabledisplay](https://bitbucket.org/feelab/py_resizabledisplay) to be installed with Conda
-
-[![Build Status](https://travis-ci.org/galenlynch/GLPlotting.jl.svg?branch=master)](https://travis-ci.org/galenlynch/GLPlotting.jl)
-
-[![Coverage Status](https://coveralls.io/repos/galenlynch/GLPlotting.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/galenlynch/GLPlotting.jl?branch=master)
-
-[![codecov.io](http://codecov.io/github/galenlynch/GLPlotting.jl/coverage.svg?branch=master)](http://codecov.io/github/galenlynch/GLPlotting.jl?branch=master)
+See [`CITATION.bib`](CITATION.bib) for the relevant reference(s).

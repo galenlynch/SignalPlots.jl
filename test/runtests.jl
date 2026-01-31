@@ -1,10 +1,10 @@
-using GLPlotting, PyPlot, PyCall, GLUtilities, GLTimeseries, PyQtGraph, PointProcesses
-
-@static if VERSION >= v"0.7.0-DEV.2575"
-    using Test
-else
-    using Base.Test
-end
+using Test
+using DynamicTimeseries: CacheAccessor, CachingStftPsd, DynamicPointBoxer,
+                         DynamicPointDownsampler, MaxMin, downsamp_req
+using EventIntervals: VariablePoints
+using PyQtGraph: QtApp, get_viewbox, pg
+using PythonPlot: colorbar, gca, plotclose, pyplot, subplots
+using SignalPlots
 
 const app = QtApp()
 
@@ -16,7 +16,7 @@ const wl = 512
 
 const ds = CachingStftPsd(A, wl, fs)
 
-@testset "GLPlotting"  begin
+@testset "SignalPlots" begin
 
     @testset "ts and spikes" begin
 
@@ -32,8 +32,13 @@ const ds = CachingStftPsd(A, wl, fs)
         ptmarks = fill(rand(20), 2)
 
         _, rabs = point_boxes_multi(
-            qtax, ptts, ptmarks, 0.0015, y_offsets;
-            director = ad, toplevel = false
+            qtax,
+            ptts,
+            ptmarks,
+            0.0015,
+            y_offsets;
+            director = ad,
+            toplevel = false,
         )
 
         app(qtplt)
@@ -41,8 +46,8 @@ const ds = CachingStftPsd(A, wl, fs)
     end
 
     @testset "util" begin
-         C = [0, 1]
-         B = fill(C, (2,))
+        C = [0, 1]
+        B = fill(C, (2,))
         @test plot_spacing(C) == 0.6
         @test plot_spacing(C, 1.2) == 0.6
         @test plot_spacing(C, 0) == 0
@@ -55,36 +60,33 @@ const ds = CachingStftPsd(A, wl, fs)
 
     @testset "pyqtgraph" begin
 
-         qtplt = pg.plot()
-         vb = get_viewbox(qtplt)
-         qtax = Axis{PQTG}(vb)
+        qtplt = pg.plot()
+        vb = get_viewbox(qtplt)
+        qtax = Axis{PQTG}(vb)
 
         downsamp_patch(qtax, dts)
         app(vb)
     end
 
     @testset "resizeableartists" begin
-         xs = [1, 2]
-         ys = [(1, 2), (3, 4)]
-         resx = [1, 1, 2, 2]
-         resy = [1, 2, 3, 4]
-        @test GLPlotting.fill_points(xs, ys, true) == (resx, resy)
-        @test GLPlotting.fill_points(xs, ys, false) == (
-            [1, 2],
-            [1, 3]
-        )
+        xs = [1, 2]
+        ys = [(1, 2), (3, 4)]
+        resx = [1, 1, 2, 2]
+        resy = [1, 2, 3, 4]
+        @test SignalPlots.fill_points(xs, ys, true) == (resx, resy)
+        @test SignalPlots.fill_points(xs, ys, false) == ([1, 2], [1, 3])
         ax = Axis{MPL}(gca())
         try
-            lineartist = GLPlotting.make_dummy_line(ax)
-            rabase = GLPlotting.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
-            rabase = GLPlotting.RABaseInfo(ax, lineartist, (0, 1), (0.0, 1.0))
-            rp = GLPlotting.ResizeablePatch(dts, rabase)
-            rp = GLPlotting.ResizeablePatch(ax, dts, lineartist, (0.0, 1.0), (0.0, 1.0))
-            rs = GLPlotting.ResizeableSpec(ax, ds)
-            rs = GLPlotting.ResizeableSpec(ax, A, fs)
-            GLPlotting.axis_lim_changed(rp, ax)
+            lineartist = SignalPlots.make_dummy_line(ax)
+            rabase = SignalPlots.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
+            rabase = SignalPlots.RABaseInfo(ax, lineartist, (0, 1), (0.0, 1.0))
+            rp = SignalPlots.ResizeablePatch(dts, rabase)
+            rp = SignalPlots.ResizeablePatch(ax, dts, lineartist, (0.0, 1.0), (0.0, 1.0))
+            rs = SignalPlots.ResizeableSpec(ax, ds)
+            rs = SignalPlots.ResizeableSpec(ax, A, fs)
+            SignalPlots.axis_lim_changed(rp, ax)
         finally
-            close()
+            plotclose()
         end
     end
 
@@ -93,28 +95,47 @@ const ds = CachingStftPsd(A, wl, fs)
 
         pttimes = rand(20)
         ptamps = rand(20)
-         qtplt = pg.plot()
-         vb = get_viewbox(qtplt)
-         qtax = Axis{PQTG}(vb)
+        qtplt = pg.plot()
+        vb = get_viewbox(qtplt)
+        qtax = Axis{PQTG}(vb)
 
         pts_1 = VariablePoints(pttimes, ptamps)
 
         dpds = DynamicPointDownsampler(pts_1)
         dpb = DynamicPointBoxer(dpds, 0.01)
 
-        ra1 = point_boxes(qtax, dpb, 0.01)
         ra = point_boxes(qtax, pttimes, ptamps, 0.01, 0.0)
 
         app(qtplt)
 
-         qtplt = pg.plot()
-         vb = get_viewbox(qtplt)
-         qtax = Axis{PQTG}(vb)
+        qtplt = pg.plot()
+        vb = get_viewbox(qtplt)
+        qtax = Axis{PQTG}(vb)
 
         pttimes_2 = rand(20)
         pts_2 = VariablePoints(pttimes_2, ptamps)
         ad, ram = point_boxes_multi(qtax, [pts_1, pts_2], 0.01, [0, 1])
         app(qtplt)
+    end
+
+    @testset "boxplot_mpl" begin
+        pttimes = rand(20)
+        ptamps = rand(20)
+
+        (fig, ax) = subplots()
+        ax = Axis{MPL}(ax)
+        try
+            ra = point_boxes(ax, pttimes, ptamps, 0.01, 0.0)
+
+            pts_1 = VariablePoints(pttimes, ptamps)
+            pttimes_2 = rand(20)
+            pts_2 = VariablePoints(pttimes_2, ptamps)
+            ad, ram = point_boxes_multi(ax, [pts_1, pts_2], 0.01, [0, 1])
+            pyplot.show()
+        catch
+            plotclose()
+            rethrow()
+        end
     end
 
     @testset "downsampplot" begin
@@ -123,9 +144,9 @@ const ds = CachingStftPsd(A, wl, fs)
         ax = Axis{MPL}(ax)
         try
             rp = downsamp_patch(ax, dts)
-            plt.show()
+            pyplot.show()
         catch
-            close()
+            plotclose()
             rethrow()
         end
     end
@@ -142,20 +163,20 @@ const ds = CachingStftPsd(A, wl, fs)
         try
             ad, artists, y_offsets = plot_vertical_spacing(ax, B, fss)
         finally
-            close()
+            plotclose()
         end
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
             dynamic_tss = fill(dts, fillshape)
 
-             qtplt = pg.plot()
-             vb = get_viewbox(qtplt)
-             qtax = Axis{PQTG}(vb)
+            qtplt = pg.plot()
+            vb = get_viewbox(qtplt)
+            qtax = Axis{PQTG}(vb)
             qtartists = plot_vertical_spacing(qtax, dynamic_tss)
 
             artists = plot_vertical_spacing(ax, dynamic_tss)
-            plt.show()
+            pyplot.show()
         catch
             rethrow()
         end
@@ -176,9 +197,9 @@ const ds = CachingStftPsd(A, wl, fs)
         ax = Axis{MPL}(ax)
         try
             rspec = resizeable_spectrogram(ax, B, fs)
-            plt.show()
+            pyplot.show()
         catch
-            close()
+            plotclose()
             rethrow()
         end
         (fig, ax) = subplots()
@@ -186,21 +207,19 @@ const ds = CachingStftPsd(A, wl, fs)
         try
             rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13])
             colorbar(rspec.baseinfo.artists[1].artist)
-            plt.show()
+            pyplot.show()
         catch
-            close()
+            plotclose()
             rethrow()
         end
         (fig, ax) = subplots()
         ax = Axis{MPL}(ax)
         try
-            rspec = resizeable_spectrogram(
-                ax, B, fs, 0, frange = [7, 13], clim = [-20, 0]
-            )
+            rspec = resizeable_spectrogram(ax, B, fs, 0, frange = [7, 13], clim = [-20, 0])
             colorbar(rspec.baseinfo.artists[1].artist)
-            plt.show()
+            pyplot.show()
         catch
-            close()
+            plotclose()
             rethrow()
         end
     end

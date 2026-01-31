@@ -12,8 +12,12 @@ function plot_cnmfe_results!(
 )
     hr = ax.plot(xs, raw, label = "raw")
     hn = ax.plot(xs, denoised, label = "de-noised")
-    res = glstem_zeros!(
-        ax, xs, spkscale * deconved, color = stem_color, label = "de-convolved"
+    res = stem_zeros!(
+        ax,
+        xs,
+        spkscale * deconved,
+        color = stem_color,
+        label = "de-convolved",
     )
 
     addxlabel && ax.set_xlabel("Time (s)")
@@ -33,16 +37,16 @@ function plot_cnmfe_results!(
     frames::AbstractVector{<:Integer},
     fps;
     addtitle = false,
-    kwargs...
+    kwargs...,
 )
-    xs = (0:length(frames) - 1) / fps
+    xs = (0:(length(frames)-1)) / fps
     res = plot_cnmfe_results!(
         ax,
         xs,
         view(raw[fno], cellno, frames),
         view(denoised[fno], cellno, frames),
         view(deconved[fno], cellno, frames);
-        kwargs...
+        kwargs...,
     )
     if addtitle
         ax.set_title("Cell $cellno File $fno Frames $(frames[1])-$(frames[end])")

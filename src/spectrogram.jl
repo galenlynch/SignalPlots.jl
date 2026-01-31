@@ -10,14 +10,14 @@ function resizeable_spectrogram(
     args...;
     listen_ax::Vector{A} = [ax],
     toplevel::Bool = true,
-    kwargs...
+    kwargs...,
 ) where {A<:Axis}
     rartist = ResizeableSpec(ax, args...; kwargs...)
     connect_callbacks(ax, rartist, listen_ax; toplevel = toplevel)
     return rartist
 end
 
-struct ResizeableSpec{T<:AbstractDynamicSpectrogram, P} <: ResizeableArtist{T,P}
+struct ResizeableSpec{T<:AbstractDynamicSpectrogram,P} <: ResizeableArtist{T,P}
     ds::T
     clim::Vector{Float64}
     frange::Vector{Float64}
@@ -28,8 +28,8 @@ struct ResizeableSpec{T<:AbstractDynamicSpectrogram, P} <: ResizeableArtist{T,P}
         clim::Vector{Float64},
         frange::Vector{Float64},
         cmap::String,
-        baseinfo::B
-    ) where {T<:AbstractDynamicSpectrogram, P<:MPL, B<:RABaseInfo{P}}
+        baseinfo::B,
+    ) where {T<:AbstractDynamicSpectrogram,P<:MPL,B<:RABaseInfo{P}}
         range_check(frange, clim)
         baseinfo.ax.ax.autoscale(false, axis = "both")
         return new(ds, clim, frange, cmap, baseinfo)
@@ -39,12 +39,12 @@ struct ResizeableSpec{T<:AbstractDynamicSpectrogram, P} <: ResizeableArtist{T,P}
         clim::Vector{Float64},
         frange::Vector{Float64},
         cmap::String,
-        baseinfo::B
-    ) where {T<:AbstractDynamicSpectrogram, P<:PQTG, B<:RABaseInfo{P}}
+        baseinfo::B,
+    ) where {T<:AbstractDynamicSpectrogram,P<:PQTG,B<:RABaseInfo{P}}
         range_check(frange, clim)
         r = new(ds, clim, frange, cmap, baseinfo)
-        di = DownsampImage(r)
-        di.setOpts(axisOrder="row-major")
+        di = pg.ImageItem()
+        di.setOpts(axisOrder = "row-major")
         push!(r.baseinfo.artists, Artist{P}(di))
         return r
     end
@@ -64,8 +64,8 @@ function ResizeableSpec(
     clim::Vector{Float64},
     frange::Vector{Float64},
     cmap::String,
-    baseinfo::RABaseInfo{P}
-) where {T<:AbstractDynamicSpectrogram, P<:PlotLib}
+    baseinfo::RABaseInfo{P},
+) where {T<:AbstractDynamicSpectrogram,P<:PlotLib}
     return ResizeableSpec{T,P}(ds, clim, frange, cmap, baseinfo)
 end
 
@@ -75,14 +75,14 @@ function ResizeableSpec(
     clim::AbstractVector{<:Real},
     frange::AbstractVector{<:Real},
     cmap::AbstractString,
-    baseinfo::RABaseInfo
-) where T<:AbstractDynamicSpectrogram # method disambiguation
+    baseinfo::RABaseInfo,
+) where {T<:AbstractDynamicSpectrogram} # method disambiguation
     return ResizeableSpec(
         ds,
         convert(Vector{Float64}, clim),
         convert(Vector{Float64}, frange),
         string(cmap),
-        baseinfo
+        baseinfo,
     )
 end
 
@@ -92,7 +92,7 @@ function ResizeableSpec(
     clim::AbstractVector{<:Real},
     frange::AbstractVector{<:Real},
     cmap::AbstractString,
-    args...
+    args...,
 )
     return ResizeableSpec(ds, clim, frange, cmap, RABaseInfo(args...))
 end
@@ -101,11 +101,11 @@ end
 function ResizeableSpec(
     ax::A,
     ds::AbstractDynamicSpectrogram,
-    args... ;
+    args...;
     clim::AbstractVector{<:Real} = Vector{Float64}(),
     frange::AbstractVector{<:Real} = Vector{Float64}(),
-    cmap::AbstractString = def_cmap(ax)
-) where {P<:PlotLib, A<:Axis{P}}
+    cmap::AbstractString = def_cmap(ax),
+) where {P<:PlotLib,A<:Axis{P}}
     yb = isempty(frange) ? extrema(ds) : (frange...,)
     return ResizeableSpec(
         ds,
@@ -116,7 +116,7 @@ function ResizeableSpec(
         Vector{Artist{P}}(),
         time_interval(ds),
         yb,
-        args...
+        args...,
     )
 end
 
@@ -131,15 +131,15 @@ function ResizeableSpec(
     frange::AbstractVector{<:Real} = Vector{Float64}(),
     cmap::AbstractString = def_cmap(ax),
     binsize::Integer = 256,
-    winfun::Union{Function, Missing} = missing
+    winfun::Union{Function,Missing} = missing,
 ) where {P<:PlotLib}
     ds = DynCachingStftPsd(a, binsize, fs, winfun, offset, 0.8)
-    return ResizeableSpec(ax, ds, args...; clim=clim, frange=frange, cmap=cmap)
+    return ResizeableSpec(ax, ds, args...; clim = clim, frange = frange, cmap = cmap)
 end
 
 def_cmap(::Type{<:PlotLib}) = ""
 def_cmap(::Type{MPL}) = "grayalpha"
-def_cmap(::Type{A}) where {P, A<:Axis{P}} = def_cmap(P)
+def_cmap(::Type{A}) where {P,A<:Axis{P}} = def_cmap(P)
 def_cmap(::A) where {A<:Axis} = def_cmap(A)
 
 downsampler(r::ResizeableSpec) = r.ds
@@ -150,7 +150,13 @@ ybounds(a::ResizeableSpec) = isempty(a.frange) ? extrema(a.ds) : a.frange
 update_args(ra::ResizeableSpec) = (ra.frange, ra.clim)
 
 function make_plotdata(
-    ds::AbstractDynamicSpectrogram, xstart, xend, pixwidth, res, frange, clim
+    ds::AbstractDynamicSpectrogram,
+    xstart,
+    xend,
+    pixwidth,
+    res,
+    frange,
+    clim,
 )
     (t, (f, s, t_w, f_w), was_downsamped) = downsamp_req(ds, xstart, xend, pixwidth)
     (db, f_start, f_end) = process_spec_data(s, f, frange, clim)
@@ -180,7 +186,14 @@ function process_spec_data(s, f, frange, clim)
 end
 
 function update_artists(
-    ra::ResizeableSpec{<:Any, P}, t_start, t_end, f_start, f_end, t_w, f_w, db
+    ra::ResizeableSpec{<:Any,P},
+    t_start,
+    t_end,
+    f_start,
+    f_end,
+    t_w,
+    f_w,
+    db,
 ) where {P<:MPL}
     if ! isempty(ra.baseinfo.artists)
         ra.baseinfo.artists[1].artist.remove()
@@ -195,36 +208,40 @@ function update_artists(
             cmap = ra.cmap,
             extent = extent,
             interpolation = "nearest",
-            aspect = "auto"
-        )
+            aspect = "auto",
+        ),
     )
     push!(ra.baseinfo.artists, imartist)
 end
 
 function bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w)
-    extent = [
-        t_start - t_w/2, t_end + t_w/2,
-        f_start - f_w/2, f_end + f_w/2
-    ]
+    extent = [t_start - t_w/2, t_end + t_w/2, f_start - f_w/2, f_end + f_w/2]
     return extent
 end
 
 function update_artists(
-    ra::ResizeableSpec{<:Any, P}, t_start, t_end, f_start, f_end, t_w, f_w, db
+    ra::ResizeableSpec{<:Any,P},
+    t_start,
+    t_end,
+    f_start,
+    f_end,
+    t_w,
+    f_w,
+    db,
 ) where {P<:PQTG}
-    ra.baseinfo.artists[1].artist.setImage(db)
+    ra.baseinfo.artists[1].artist.setImage(tonumpy(db))
     (x_s, x_e, y_s, y_e) = bounding_rect(t_start, t_end, t_w, f_start, f_end, f_w)
-    qtrect = qtc.QRectF(x_s, y_s, x_e - x_s, y_e - y_s)::PyObject
+    qtrect = qtc.QRectF(x_s, y_s, x_e - x_s, y_e - y_s)
     ra.baseinfo.artists[1].artist.setRect(qtrect)
     nothing
 end
 
-function clipval!(a::AbstractArray, c::NTuple{2, R}) where {R<:Number}
-    a[a.<c[1]] .= c[1]
-    a[a.>c[2]] .= c[2]
+function clipval!(a::AbstractArray, c::NTuple{2,R}) where {R<:Number}
+    a[a .< c[1]] .= c[1]
+    a[a .> c[2]] .= c[2]
 end
 
-noop(args...;kwargs...) = nothing
+noop(args...; kwargs...) = nothing
 p2db(a::Number) = 10 * log10(a)
 
 function empty_or_ordered_bound(a::AbstractArray)
@@ -253,7 +270,7 @@ function plot_example_spectrogram(
     freq_units = "Hz",
     time_units = "s",
     binsize = 512,
-    kwargs...
+    kwargs...,
 )
     rspec = resizeable_spectrogram(
         sp_ax,
@@ -264,7 +281,7 @@ function plot_example_spectrogram(
         frange = frange,
         listen_ax = listen_ax,
         binsize = binsize,
-        kwargs...
+        kwargs...,
     );
 
     if title
@@ -276,12 +293,16 @@ function plot_example_spectrogram(
         ax_yb, ax_ye = axis_ylim(sp_ax)
         f_scalebar_ax_size, f_scalebar_units, f_scalebar_prefix =
             best_scalebar_size(ax_yb, ax_ye, freq_scalebar_frac)
-        freq_scalebar_label  =
-            "$(f_scalebar_units) $(f_scalebar_prefix)$freq_units"
+        freq_scalebar_label = "$(f_scalebar_units) $(f_scalebar_prefix)$freq_units"
         sb_f = matplotlib_scalebar(
-            sp_ax.ax, f_scalebar_ax_size, freq_scalebar_label,
-            horizontal = false, loc = "lower right", axes_pos = freq_scalebar_pos, sep = 2,
-            textprops = Dict("fontsize" => 6)
+            sp_ax.ax,
+            f_scalebar_ax_size,
+            freq_scalebar_label,
+            horizontal = false,
+            loc = "lower right",
+            axes_pos = freq_scalebar_pos,
+            sep = 2,
+            textprops = Dict("fontsize" => 6),
         )
     else
         sb_f = nothing
@@ -290,12 +311,15 @@ function plot_example_spectrogram(
         ax_xb, ax_xe = axis_xlim(sp_ax)
         t_scalebar_ax_size, t_scalebar_units, t_scalebar_prefix =
             best_scalebar_size(ax_xb, ax_xe, time_scalebar_frac)
-        time_scalebar_label  =
-            "$(t_scalebar_units) $(t_scalebar_prefix)$time_units"
+        time_scalebar_label = "$(t_scalebar_units) $(t_scalebar_prefix)$time_units"
         sb_ms = matplotlib_scalebar(
-            sp_ax.ax, t_scalebar_ax_size, time_scalebar_label,
-            textfirst = false, loc = "upper right",
-            axes_pos = time_scalebar_pos, textprops = Dict("fontsize" => 6)
+            sp_ax.ax,
+            t_scalebar_ax_size,
+            time_scalebar_label,
+            textfirst = false,
+            loc = "upper right",
+            axes_pos = time_scalebar_pos,
+            textprops = Dict("fontsize" => 6),
         )
     else
         sb_ms = nothing
@@ -324,12 +348,10 @@ function plot_annotated_spectrogram(
     other_label_text_color = "0.4",
     syll_label_kwargs::Dict = Dict(),
     use_syll_labels::Bool = true,
-    kwargs...
+    kwargs...,
 )
-    rspec, sb_f, sb_ms = plot_example_spectrogram(
-        sp_ax, song_clip, pre;
-        frange = frange, kwargs...
-    )
+    rspec, sb_f, sb_ms =
+        plot_example_spectrogram(sp_ax, song_clip, pre; frange = frange, kwargs...)
 
     if !(isempty(aligned_motif_syl_ints) && isempty(clipped_other_syl_ints))
         # Syllable labels
@@ -341,7 +363,7 @@ function plot_annotated_spectrogram(
             height = f_height,
             ycenter = f_center,
             facecolor = motif_patch_color,
-            clip_on = false
+            clip_on = false,
         )
 
         sp_ax.ax.add_collection(pcm)
@@ -353,7 +375,7 @@ function plot_annotated_spectrogram(
                 midpoint.(aligned_motif_syl_ints),
                 motif,
                 label_f;
-                syll_label_kwargs...
+                syll_label_kwargs...,
             )
         else
             mth = nothing
@@ -367,7 +389,7 @@ function plot_annotated_spectrogram(
                     other_syll_labels,
                     label_f;
                     color = other_label_text_color,
-                    syll_label_kwargs...
+                    syll_label_kwargs...,
                 )
             else
                 oth = nothing
@@ -377,7 +399,7 @@ function plot_annotated_spectrogram(
                 height = f_height,
                 ycenter = f_center,
                 facecolor = other_syl_patch_color,
-                clip_on = false
+                clip_on = false,
             )
 
             sp_ax.ax.add_collection(pco)

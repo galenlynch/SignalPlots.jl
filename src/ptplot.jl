@@ -4,15 +4,17 @@
 Plot a set of points with boxes around each point, merging if necessary.
 """
 function point_boxes(
-    ax::Axis{P}, xpoints, heights, min_t, y_center = 0;
+    ax::Axis{P},
+    xpoints,
+    heights,
+    min_t,
+    y_center = 0;
     listen_ax::AbstractVector{Axis{P}} = [ax],
     toplevel::Bool = true,
     pen = def_line_colors[1],
-    kwargs...
-) where P<:PlotLib
-    rmp = MergingPoints(
-        ax, xpoints, heights, min_t, y_center; pen = pen, kwargs...
-    )
+    kwargs...,
+) where {P<:PlotLib}
+    rmp = MergingPoints(ax, xpoints, heights, min_t, y_center; pen = pen, kwargs...)
     connect_callbacks(ax, rmp, listen_ax; toplevel = toplevel)
     rmp
 end
@@ -21,24 +23,21 @@ function point_boxes_multi(
     ax::A,
     pts::AbstractVector{<:DynamicPointBoxer},
     min_width::Number = 0;
-    director::Union{Missing, ArtDirector} = missing,
+    director::Union{Missing,ArtDirector} = missing,
     listen_ax::Vector{A} = [ax],
     toplevel::Bool = true,
-    cluster_ids::Union{
-        AbstractVector{<:Integer},
-        AbstractVector{<:AbstractString}
-    } = String[],
+    cluster_ids::Union{AbstractVector{<:Integer},AbstractVector{<:AbstractString}} = String[],
     pens::AbstractVector = String[],
-    kwargs...
-) where A<:Axis
+    kwargs...,
+) where {A<:Axis}
     np = length(pts)
     np > 0 || throw(ArgumentError("np can not be empty"))
-    isempty(cluster_ids) || length(cluster_ids) == np || throw(ArgumentError(
-        "Cluster ids not the right size"
-    ))
-    isempty(pens) || length(pens) == np || throw(ArgumentError(
-        "Cluster ids not the right size"
-    ))
+    isempty(cluster_ids) ||
+        length(cluster_ids) == np ||
+        throw(ArgumentError("Cluster ids not the right size"))
+    isempty(pens) ||
+        length(pens) == np ||
+        throw(ArgumentError("Cluster ids not the right size"))
     usename = ! isempty(cluster_ids)
     if eltype(cluster_ids) <: Integer
         spk_names = string.(cluster_ids)
@@ -46,27 +45,31 @@ function point_boxes_multi(
         spk_names = cluster_ids
     end
     usepens = ! isempty(pens)
-    pen_karg = usepens ? Dict(:pen => pens[1]) : Dict{Symbol, String}()
+    pen_karg = usepens ? Dict(:pen => pens[1]) : Dict{Symbol,String}()
     name_karg = usename ? ((:name, spk_names[1]),) : ()
     rmp_first = MergingPoints(
-        ax, pts[1], min_width;
+        ax,
+        pts[1],
+        min_width;
         pen = def_line_colors[1],
         name_karg...,
         pen_karg...,
-        kwargs...
+        kwargs...,
     )
-    @compat rmps = Vector{typeof(rmp_first)}(undef, np)
+    rmps = Vector{typeof(rmp_first)}(undef, np)
     rmps[1] = rmp_first
     nc = length(def_line_colors)
-    @inbounds for i in 2:np
+    @inbounds for i = 2:np
         loop_name_karg = usename ? ((:name, spk_names[i]),) : ()
-        loop_pen_karg = usepens ? Dict(:pen => pens[i]) : Dict{Symbol, String}()
+        loop_pen_karg = usepens ? Dict(:pen => pens[i]) : Dict{Symbol,String}()
         rmps[i] = MergingPoints(
-            ax, pts[i], min_width;
+            ax,
+            pts[i],
+            min_width;
             pen = def_line_colors[ndx_wrap(i, nc)],
             loop_name_karg...,
             loop_pen_karg...,
-            kwargs...
+            kwargs...,
         )
     end
     if ismissing(director)
@@ -75,10 +78,7 @@ function point_boxes_multi(
     else
         ad = director
         append_artists!(ad, rmps)
-        foreach(
-            ra -> connect_callbacks(ax, ra, listen_ax; toplevel = false),
-            rmps
-        )
+        foreach(ra -> connect_callbacks(ax, ra, listen_ax; toplevel = false), rmps)
     end
     toplevel && set_ax_home(ad)
     ad, rmps
@@ -89,15 +89,14 @@ function point_boxes_multi(
     pts::AbstractVector{<:DynamicPointDownsampler},
     min_width::Number,
     y_offsets::AbstractVector{<:Number},
-    args...; kwargs...
+    args...;
+    kwargs...,
 )
     boxers = DynamicPointBoxer.(pts, min_width, y_offsets)
     point_boxes_multi(ax, boxers, args...; kwargs...)
 end
 
-function point_boxes_multi(
-    ax::Axis, pts::AbstractVector{<:Points}, args...; kwargs...
-)
+function point_boxes_multi(ax::Axis, pts::AbstractVector{<:Points}, args...; kwargs...)
     point_boxes_multi(ax, DynamicPointDownsampler.(pts), args...; kwargs...)
 end
 
@@ -105,26 +104,32 @@ function point_boxes_multi(
     ax::Axis,
     pttimes::AbstractVector{<:AbstractVector{<:Number}},
     ptmarks::AbstractVector{<:AbstractVector{<:Number}},
-    args...; kwargs...
+    args...;
+    kwargs...,
 )
     point_boxes_multi(ax, VariablePoints.(pttimes, ptmarks), args...; kwargs...)
 end
 
-struct MergingPoints{T<:DynamicPointBoxer, P<:PlotLib} <: ResizeableArtist{T, P}
+struct MergingPoints{T<:DynamicPointBoxer,P<:PlotLib} <: ResizeableArtist{T,P}
     dynamicpoints::T
     baseinfo::RABaseInfo{P}
     function MergingPoints{T,P}(
-        dts::T, baseinfo::RABaseInfo{P}; plotkwargs...
-    ) where {T<:DynamicPointBoxer, P<:MPL}
+        dts::T,
+        baseinfo::RABaseInfo{P};
+        plotkwargs...,
+    ) where {T<:DynamicPointBoxer,P<:MPL}
         new(dts, baseinfo)
     end
     function MergingPoints{T,P}(
-        dynamicpoints::T, baseinfo::RABaseInfo{P}; plotkwargs...
-    ) where {T<:DynamicPointBoxer, P<:PQTG}
+        dynamicpoints::T,
+        baseinfo::RABaseInfo{P};
+        plotkwargs...,
+    ) where {T<:DynamicPointBoxer,P<:PQTG}
         r = new(dynamicpoints, baseinfo)
-        push!(r.baseinfo.artists, Artist{P}(DownsampCurve(
-            r, connect = "finite"; plotkwargs...
-        )))
+        push!(
+            r.baseinfo.artists,
+            Artist{P}(pg.PlotCurveItem(connect = "finite"; plotkwargs...)),
+        )
         r.baseinfo.artists[1].artist.setZValue(-1.0)
         r
     end
@@ -132,9 +137,11 @@ end
 
 # Pull type parameters
 function MergingPoints(
-    dynamicpoints::T, ra::R; plotkwargs...
-) where {T<:DynamicPointBoxer, P, R<:RABaseInfo{P}}
-    MergingPoints{T, P}(dynamicpoints, ra; plotkwargs...)
+    dynamicpoints::T,
+    ra::R;
+    plotkwargs...,
+) where {T<:DynamicPointBoxer,P,R<:RABaseInfo{P}}
+    MergingPoints{T,P}(dynamicpoints, ra; plotkwargs...)
 end
 
 function MergingPoints(dpb::DynamicPointBoxer, args...; plotkwargs...)
@@ -142,8 +149,11 @@ function MergingPoints(dpb::DynamicPointBoxer, args...; plotkwargs...)
 end
 
 function MergingPoints(
-    ax::Axis{P}, dts::DynamicPointBoxer, args...;
-    plotargs::Vector{Any} = [], plotkwargs...
+    ax::Axis{P},
+    dts::DynamicPointBoxer,
+    args...;
+    plotargs::Vector{Any} = [],
+    plotkwargs...,
 ) where {P<:PQTG}
     xbounds = bounds(time_interval(dts))
     ybounds = extrema(dts)
@@ -156,13 +166,13 @@ function MergingPoints(
     dts::DynamicPointBoxer,
     args...;
     plotargs::Vector{Any} = [],
-    plotkwargs...
+    pen = nothing,
+    plotkwargs...,
 ) where {P<:MPL}
-    plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
+    mpl_kwargs = pen === nothing ? plotkwargs : (; color = pen, plotkwargs...)
+    plotline = make_dummy_line(ax, plotargs...; mpl_kwargs...)
     artists = [plotline]
-    MergingPoints(
-        dts, ax, artists, bounds(time_interval(dts)), extrema(dts)
-    )
+    MergingPoints(dts, ax, artists, bounds(time_interval(dts)), extrema(dts))
 end
 
 function MergingPoints(
@@ -172,12 +182,10 @@ function MergingPoints(
     y_center = 0,
     args...;
     plotargs::Vector{Any} = [],
-    plotkwargs...
+    plotkwargs...,
 )
     dts = DynamicPointBoxer(pts, min_width, y_center)
-    MergingPoints(
-        ax, dts, args...; plotargs = plotargs, plotkwargs...
-    )
+    MergingPoints(ax, dts, args...; plotargs = plotargs, plotkwargs...)
 end
 
 function MergingPoints(
@@ -185,11 +193,9 @@ function MergingPoints(
     xpts::AbstractVector{<:Number},
     heights::AbstractVector{<:Number},
     args...;
-    kwargs...
+    kwargs...,
 )
-    MergingPoints(
-        ax, VariablePoints(xpts, heights), args...; kwargs...
-    )
+    MergingPoints(ax, VariablePoints(xpts, heights), args...; kwargs...)
 end
 
 downsampler(r::MergingPoints) = r.dynamicpoints
@@ -199,14 +205,14 @@ function box_points(
     xlefts::AbstractVector{X},
     ybottoms::AbstractVector{Y},
     widths::AbstractVector,
-    heights::AbstractVector
-) where {X<:AbstractFloat, Y<:AbstractFloat}
+    heights::AbstractVector,
+) where {X<:AbstractFloat,Y<:AbstractFloat}
     nin = length(xlefts)
     npt = 6 * nin
-    @compat xs = Vector{X}(undef, npt)
-    @compat ys = Vector{Y}(undef, npt)
+    xs = Vector{X}(undef, npt)
+    ys = Vector{Y}(undef, npt)
     connect = fill(true, npt)
-    @inbounds @simd for i_in in 1:nin
+    @inbounds @simd for i_in = 1:nin
         left = xlefts[i_in]
         right = left + widths[i_in]
 
@@ -216,17 +222,17 @@ function box_points(
         i_out = (i_in - 1) * 6 + 1
 
         # Bottom left (twice, second time to close)
-        xs[i_out] = xs[i_out + 4] = left
-        ys[i_out] = ys[i_out + 4] = bottom
+        xs[i_out] = xs[i_out+4] = left
+        ys[i_out] = ys[i_out+4] = bottom
         # Top left
-        xs[i_out + 1] = left
-        ys[i_out + 1] = top
+        xs[i_out+1] = left
+        ys[i_out+1] = top
         # Top right
-        xs[i_out + 2] = right
-        ys[i_out + 2] = top
+        xs[i_out+2] = right
+        ys[i_out+2] = top
         # Bottom right
-        xs[i_out + 3] = right
-        ys[i_out + 3] = bottom
+        xs[i_out+3] = right
+        ys[i_out+3] = bottom
     end
     # Blanking
     xs[6:6:end] .= NaN
@@ -241,7 +247,7 @@ function make_plotdata(dp::DynamicPointBoxer, xstart, xend, pixwidth, res)
 end
 
 function update_artists(ra::MergingPoints{<:Any,PQTG}, xpt, ypt, connect)
-    ra.baseinfo.artists[1].artist.setData(xpt, ypt, connect = connect)
+    ra.baseinfo.artists[1].artist.setData(tonumpy(xpt), tonumpy(ypt), connect = tonumpy(connect))
 end
 
 function update_artists(ra::MergingPoints{<:Any,MPL}, xpt, ypt, args...)

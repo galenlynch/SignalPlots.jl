@@ -4,14 +4,13 @@ struct MPL <: PlotLib end
 struct PQTG <: PlotLib end
 
 struct Axis{P<:PlotLib}
-    ax::PyObject
+    ax::Py
 end
 
 struct Artist{P<:PlotLib}
-    artist::PyObject
+    artist::Py
 end
 
 struct GView{P<:PlotLib}
-    gview::PyObject
+    gview::Py
 end
-

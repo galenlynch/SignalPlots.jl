@@ -8,7 +8,7 @@ function downsamp_patch(
     args...;
     listen_ax::Vector{A} = [ax],
     toplevel::Bool = true,
-    kwargs...
+    kwargs...,
 ) where {A<:Axis}
     rpatch = ResizeablePatch(ax, args...; kwargs...)
     connect_callbacks(ax, rpatch, listen_ax; toplevel = toplevel)
@@ -30,15 +30,14 @@ function plot_multi_patch(
     listen_ax::Vector{A} = [ax];
     toplevel = true,
     colorargs = nothing,
-    plotkwargs...
-) where {P<:PlotLib, A<:Axis{P}, T<:AbstractDynamicDownsampler}
+    plotkwargs...,
+) where {P<:PlotLib,A<:Axis{P},T<:AbstractDynamicDownsampler}
     na = length(dts)
-    indices = mod.(0:(na - 1), 10) # for Python consumption, base zero
+    indices = mod.(0:(na-1), 10) # for Python consumption, base zero
     colorargs = def_colorargs(colorargs, indices)
-    @compat patchartists = Vector{ResizeablePatch{T,P}}(undef, na)
-    for i in 1:na
-        patchartists[i] = downsamp_patch(ax, dts[i]; color = colorargs[i],
-                                         plotkwargs...)
+    patchartists = Vector{ResizeablePatch{T,P}}(undef, na)
+    for i = 1:na
+        patchartists[i] = downsamp_patch(ax, dts[i]; color = colorargs[i], plotkwargs...)
     end
     ad = ArtDirector(patchartists)
     connect_callbacks(ax, ad, listen_ax; toplevel = toplevel)
@@ -52,43 +51,44 @@ function plot_multi_patch(
     return ad, patchartists
 end
 
-struct ResizeablePatch{T<:AbstractDynamicDownsampler, P<:PlotLib} <: ResizeableArtist{T,P}
+struct ResizeablePatch{T<:AbstractDynamicDownsampler,P<:PlotLib} <: ResizeableArtist{T,P}
     dts::T
     baseinfo::RABaseInfo{P}
     exact::Bool
-    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}, exact::Bool) where
-        {T<:AbstractDynamicDownsampler, P<:MPL}
+    function ResizeablePatch{T,P}(
+        dts::T,
+        baseinfo::RABaseInfo{P},
+        exact::Bool,
+    ) where {T<:AbstractDynamicDownsampler,P<:MPL}
         new(dts, baseinfo, exact)
     end
-    function ResizeablePatch{T,P}(dts::T, baseinfo::RABaseInfo{P}, exact::Bool) where
-        {T<:AbstractDynamicDownsampler, P<:PQTG}
+    function ResizeablePatch{T,P}(
+        dts::T,
+        baseinfo::RABaseInfo{P},
+        exact::Bool,
+    ) where {T<:AbstractDynamicDownsampler,P<:PQTG}
         r = new(dts, baseinfo, exact)
-        push!(r.baseinfo.artists, Artist{P}(DownsampCurve(r)))
+        push!(r.baseinfo.artists, Artist{P}(pg.PlotCurveItem()))
         return r
     end
 end
 
 
-function ResizeablePatch(dts::T, ra::R, exact::Bool = false) where
-    {T<:AbstractDynamicDownsampler,P,R<:RABaseInfo{P}}
+function ResizeablePatch(
+    dts::T,
+    ra::R,
+    exact::Bool = false,
+) where {T<:AbstractDynamicDownsampler,P,R<:RABaseInfo{P}}
     ResizeablePatch{T,P}(dts, ra, exact)
 end
 
 function ResizeablePatch(
-    dts::AbstractDynamicDownsampler, args...;
-    exact::Bool = false, kwargs...
+    dts::AbstractDynamicDownsampler,
+    args...;
+    exact::Bool = false,
+    kwargs...,
 )
     return ResizeablePatch(dts, RABaseInfo(args...; kwargs...), exact)
-end
-
-function ResizeablePatch(
-    ax::Axis{P}, dts::AbstractDynamicDownsampler, args...;
-    exact::Bool = false, plotargs::Vector{Any} = [], plotkwargs...
-) where {P<:PQTG}
-    xbounds = time_interval(dts)
-    ybounds = extrema(dts)
-    artists = Vector{Artist{P}}()
-    return ResizeablePatch(dts, ax, artists, xbounds, ybounds; exact=exact)
 end
 
 function ResizeablePatch(
@@ -97,12 +97,31 @@ function ResizeablePatch(
     args...;
     exact::Bool = false,
     plotargs::Vector{Any} = [],
-    plotkwargs...
+    plotkwargs...,
+) where {P<:PQTG}
+    xbounds = time_interval(dts)
+    ybounds = extrema(dts)
+    artists = Vector{Artist{P}}()
+    return ResizeablePatch(dts, ax, artists, xbounds, ybounds; exact = exact)
+end
+
+function ResizeablePatch(
+    ax::Axis{P},
+    dts::AbstractDynamicDownsampler,
+    args...;
+    exact::Bool = false,
+    plotargs::Vector{Any} = [],
+    plotkwargs...,
 ) where {P<:MPL}
     plotline = make_dummy_line(ax, plotargs...; plotkwargs...)
     artists = [plotline]
     return ResizeablePatch(
-        dts, ax, artists, time_interval(dts), extrema(dts); exact=exact
+        dts,
+        ax,
+        artists,
+        time_interval(dts),
+        extrema(dts);
+        exact = exact,
     )
 end
 
@@ -114,39 +133,39 @@ function ResizeablePatch(
     args...;
     exact::Bool = false,
     plotargs::Vector{Any} = [],
-    plotkwargs...
+    plotkwargs...,
 )
     dts = CacheAccessor(MaxMin, a, fs, offset, 1000)
     return ResizeablePatch(
-        ax, dts, args...;
-        exact=exact, plotargs=plotargs, plotkwargs...
+        ax,
+        dts,
+        args...;
+        exact = exact,
+        plotargs = plotargs,
+        plotkwargs...,
     )
 end
 
 downsampler(r::ResizeablePatch) = r.dts
 
 function fill_points(
-    xs::A, ys::B, was_downsampled::Bool
-) where {
-    X<:Number,
-    A<:AbstractVector{X},
-    Y<:Number,
-    T<:NTuple{2, Y},
-    B<:AbstractVector{T}
-}
+    xs::A,
+    ys::B,
+    was_downsampled::Bool,
+) where {X<:Number,A<:AbstractVector{X},Y<:Number,T<:NTuple{2,Y},B<:AbstractVector{T}}
     if was_downsampled
         npt = 2 * length(xs)
-        @compat xpts = Vector{X}(undef, npt)
-        @compat ypts = Vector{Y}(undef, npt)
+        xpts = Vector{X}(undef, npt)
+        ypts = Vector{Y}(undef, npt)
         for (x_i, x) in enumerate(xs) # Enumerate over input
             # Calculate the corresponding position in the output
             i = (x_i - 1) * 2 + 1
             # First two points have the same x (vertical line)
             xpts[i] = x
-            xpts[i + 1] = x
+            xpts[i+1] = x
             # These two points are the min and max y values
             ypts[i] = ys[x_i][1]
-            ypts[i + 1] = ys[x_i][2]
+            ypts[i+1] = ys[x_i][2]
         end
     else
         xpts = convert(Vector{X}, xs)
@@ -158,12 +177,12 @@ end
 update_args(ra::ResizeablePatch) = (ra.exact,)
 
 function make_plotdata(
-    dts::AbstractDynamicDownsampler{<:NTuple{2, <:Number}},
+    dts::AbstractDynamicDownsampler{<:NTuple{2,<:Number}},
     xstart,
     xend,
     pixwidth,
     res,
-    exact
+    exact,
 )
     fill_points(downsamp_req(dts, xstart, xend, pixwidth, exact, Int32)...)
 end
@@ -173,22 +192,16 @@ function update_artists(ra::ResizeablePatch{<:Any,MPL}, xpt, ypt)
 end
 
 function update_artists(ra::ResizeablePatch{<:Any,PQTG}, xpt, ypt)
-    ra.baseinfo.artists[1].artist.setData(xpt, ypt)
+    ra.baseinfo.artists[1].artist.setData(tonumpy(xpt), tonumpy(ypt))
 end
 
 "Make a line with place-holder data"
 function make_dummy_line(
-    ax::A, plotargs...;
+    ax::A,
+    plotargs...;
     name = nothing,
-    plotkwargs...
-) where
-    {P<:MPL, A<:Axis{P}}
-    label_karg = ifelse(
-        name == nothing,
-        Dict{Symbol, String}(),
-        Dict(:label => name)
-    )
-    return Artist{P}(
-        ax.ax.plot(0, 0, plotargs...; label_karg..., plotkwargs...)[1]
-    )
+    plotkwargs...,
+) where {P<:MPL,A<:Axis{P}}
+    label_karg = isnothing(name) ? Dict{Symbol,String}() : Dict(:label => name)
+    return Artist{P}(ax.ax.plot(0, 0, plotargs...; label_karg..., plotkwargs...)[0])
 end

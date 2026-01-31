@@ -1,0 +1,7 @@
+[deps]
+DynamicTimeseries = "1899e1d9-0e62-5b08-93e8-96938e3582a6"
+EventIntervals = "1751c77c-d90c-5130-9faa-3b4ea8d90a70"
+PyQtGraph = "3671797b-b403-50f8-ae8f-9a67aa3877b6"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+PythonPlot = "274fc56d-3b97-40fa-a1cd-1b4a50311bf9"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

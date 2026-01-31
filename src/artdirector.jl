@@ -1,21 +1,19 @@
-struct ArtDirector{P<:PlotLib, S<:ParallelSpeed}
-    artists::Vector{ResizeableArtist{<:AbstractDynamicDownsampler, P}}
+struct ArtDirector{P<:PlotLib,S<:ParallelSpeed}
+    artists::Vector{ResizeableArtist{<:AbstractDynamicDownsampler,P}}
     axes::Vector{Axis{P}}
-    limx::Vector{NTuple{2, Float64}}
-    limy::Vector{NTuple{2, Float64}}
-    jobchannel::RemoteChannel{Channel{Tuple{Int, FuncCall}}}
-    datachannel::RemoteChannel{Channel{Tuple{Int, Vector{Float64}, Vector{Float64}}}}
+    limx::Vector{NTuple{2,Float64}}
+    limy::Vector{NTuple{2,Float64}}
+    jobchannel::RemoteChannel{Channel{Tuple{Int,FuncCall}}}
+    datachannel::RemoteChannel{Channel{Tuple{Int,Vector{Float64},Vector{Float64}}}}
     pspeeds::Vector{S}
     function ArtDirector{P,S}(
-        artists::Vector{<:ResizeableArtist{<:Any, P}}, pspeeds::Vector{S}
-    ) where {P<:PlotLib, S<:ParallelSpeed}
+        artists::Vector{<:ResizeableArtist{<:Any,P}},
+        pspeeds::Vector{S},
+    ) where {P<:PlotLib,S<:ParallelSpeed}
         axes, limx, limy = artist_bounds(artists)
-        jobchannel = RemoteChannel(
-            ()->Channel{Tuple{Int, FuncCall}}(100)
-        )
-        datachannel = RemoteChannel(
-            ()->Channel{Tuple{Int, Vector{Float64}, Vector{Float64}}}(100)
-        )
+        jobchannel = RemoteChannel(()->Channel{Tuple{Int,FuncCall}}(100))
+        datachannel =
+            RemoteChannel(()->Channel{Tuple{Int,Vector{Float64},Vector{Float64}}}(100))
         for p in workers()
             @async remote_do(do_work, p, jobchannel, datachannel)
         end
@@ -24,8 +22,9 @@ struct ArtDirector{P<:PlotLib, S<:ParallelSpeed}
 end
 
 function ArtDirector(
-    a::AbstractVector{<:ResizeableArtist{<:Any, P}}, s::AbstractVector{S}
-) where {P<:PlotLib, S<:ParallelSpeed}
+    a::AbstractVector{<:ResizeableArtist{<:Any,P}},
+    s::AbstractVector{S},
+) where {P<:PlotLib,S<:ParallelSpeed}
     return ArtDirector{P,S}(a, convert(Vector{S}, s))
 end
 
@@ -37,13 +36,11 @@ function artist_bounds(ras::AbstractVector{<:ResizeableArtist})
     combine_axis_info(summarize_artists(ras)...)
 end
 
-function summarize_artists(
-    artists::AbstractVector{<:ResizeableArtist{<:Any, P}}
-) where P
+function summarize_artists(artists::AbstractVector{<:ResizeableArtist{<:Any,P}}) where {P}
     nartist = length(artists)
-    @compat allaxes = Vector{Axis{P}}(undef, nartist)
-    @compat allxlim = Vector{NTuple{2, Float64}}(undef, nartist)
-    @compat allylim = Vector{NTuple{2, Float64}}(undef, nartist)
+    allaxes = Vector{Axis{P}}(undef, nartist)
+    allxlim = Vector{NTuple{2,Float64}}(undef, nartist)
+    allylim = Vector{NTuple{2,Float64}}(undef, nartist)
     for (i, ra) in enumerate(artists)
         allaxes[i] = ra.baseinfo.ax
         allxlim[i] = ra.baseinfo.datalimx
@@ -54,14 +51,14 @@ end
 
 function combine_axis_info(
     allaxes::AbstractVector{<:Axis},
-    allxlim::AbstractVector{<:NTuple{2, <:Number}},
-    allylim::AbstractVector{<:NTuple{2, <:Number}}
+    allxlim::AbstractVector{<:NTuple{2,<:Number}},
+    allylim::AbstractVector{<:NTuple{2,<:Number}},
 )
     axes = unique(allaxes)
     nax = length(axes)
-    @compat limx = Vector{NTuple{2,Float64}}(undef, nax)
-    @compat limy = Vector{NTuple{2, Float64}}(undef, nax)
-    @compat matchmask = Vector{Bool}(undef, length(allaxes))
+    limx = Vector{NTuple{2,Float64}}(undef, nax)
+    limy = Vector{NTuple{2,Float64}}(undef, nax)
+    matchmask = Vector{Bool}(undef, length(allaxes))
     for (i, ax) in enumerate(axes)
         matchmask .= allaxes .== Ref(ax)
         limx[i] = extrema_red(allxlim[matchmask])
@@ -70,9 +67,7 @@ function combine_axis_info(
     axes, limx, limy
 end
 
-function append_artists!(
-    ad::ArtDirector, ras::AbstractVector{<:ResizeableArtist}
-)
+function append_artists!(ad::ArtDirector, ras::AbstractVector{<:ResizeableArtist})
     new_axes, new_xlims, new_ylims = summarize_artists(ras)
 
     used_mask = fill(false, size(new_axes))
@@ -93,7 +88,9 @@ function append_artists!(
     novel_mask = used_mask # confusing, I know
 
     novel_ax, novel_xlim, novel_ylim = combine_axis_info(
-        new_axes[novel_mask], new_xlims[novel_mask], new_ylims[novel_mask]
+        new_axes[novel_mask],
+        new_xlims[novel_mask],
+        new_ylims[novel_mask],
     )
     append!(ad.artists, ras)
     append!(ad.axes, novel_ax)
@@ -117,10 +114,7 @@ function do_work(jobs, results)
     end
 end
 
-function axis_lim_changed(
-    ra::Union{ResizeableArtist, ArtDirector},
-    notifying_ax::Axis
-)
+function axis_lim_changed(ra::Union{ResizeableArtist,ArtDirector}, notifying_ax::Axis)
     (xstart, xend) = axis_xlim(notifying_ax)
     maybe_redraw(ra, xstart, xend)
 end
@@ -130,7 +124,7 @@ function axis_lim_changed(ra::ResizeableArtist{<:Any,PQTG})
 end
 
 function axis_lim_changed(ra::ArtDirector{PQTG,<:Any})
-    axis_lim_changes(ra, ra.axes[1])
+    axis_lim_changed(ra, ra.axes[1])
 end
 
 function force_redraw(ad::ArtDirector)
@@ -148,7 +142,7 @@ function redraw(
     xstart,
     xend,
     limwidth,
-    limcenter
+    limcenter,
 )
     nra = length(artists_to_redraw)
     px_artists = Vector{Int}(undef, nra)
@@ -168,7 +162,7 @@ function redraw(
         px_data_widths,
         ad.jobchannel,
         ad.datachannel,
-        ad.pspeeds
+        ad.pspeeds,
     )
     if ! isempty(artists_to_redraw)
         for ax in ad.axes
@@ -192,7 +186,7 @@ function maybe_redraw(ad::ArtDirector, xstart, xend)
     redraw(ad, artists_to_redraw, xstart, xend, limwidth, limcenter)
 end
 
-function remove(ax::Axis{PQTG}, ras::ArtDirector{PQTG, <:Any})
+function remove(ax::Axis{PQTG}, ras::ArtDirector{PQTG,<:Any})
     for ra in ras.artists
         remove(ax, ra)
     end

@@ -1,6 +1,6 @@
-using GLPlotting, WAV, PyPlot, PyCall
+using SignalPlots, WAV, PythonPlot, PythonCall
 
-using GLPlotting: ResizeableArtist
+using SignalPlots: ResizeableArtist
 
 datapath = "/home/glynch/Documents/Data/Screening/song_imitation"
 fnames = ["tutor.wav", "subsong.wav", "plastic_song.wav", "imitation.wav"]
@@ -10,14 +10,14 @@ showfigures = true
 clim = [-85, -40]
 offsets = [0, 0, 0, 0.35]
 
-pygui(showfigures)
+showfigures ? PythonPlot.ion() : PythonPlot.ioff()
 nf = length(fnames)
 
 f, axs = subplots(nf, 1, sharex = true, figsize = figsize, dpi = figdpi)
 gl_axs = Axis{MPL}.(axs)
 
 rspecs = Vector{ResizeableArtist}(undef, nf)
-sb_f = Vector{Union{Nothing, PyObject}}(undef, nf)
+sb_f = Vector{Union{Nothing,Py}}(undef, nf)
 sb_t = similar(sb_f)
 sig_l = Vector{Float64}(undef, nf)
 
