@@ -1,14 +1,14 @@
-using SignalPlots
+using NeuroPlots
 using Documenter
 
-DocMeta.setdocmeta!(SignalPlots, :DocTestSetup, :(using SignalPlots); recursive=true)
+DocMeta.setdocmeta!(NeuroPlots, :DocTestSetup, :(using NeuroPlots); recursive=true)
 
 makedocs(;
-    modules=[SignalPlots],
+    modules=[NeuroPlots],
     authors="Galen Lynch <galen@galenlynch.com>",
-    sitename="SignalPlots.jl",
+    sitename="NeuroPlots.jl",
     format=Documenter.HTML(;
-        canonical="https://galenlynch.github.io/SignalPlots.jl",
+        canonical="https://galenlynch.github.io/NeuroPlots.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/galenlynch/SignalPlots.jl",
+    repo="github.com/galenlynch/NeuroPlots.jl",
     devbranch="main",
 )

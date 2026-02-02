@@ -4,7 +4,7 @@ using DynamicTimeseries: CacheAccessor, CachingStftPsd, DynamicPointBoxer,
 using EventIntervals: VariablePoints
 using PyQtGraph: QtApp, get_viewbox, pg
 using PythonPlot: colorbar, gca, plotclose, pyplot, subplots
-using SignalPlots
+using NeuroPlots
 
 const app = QtApp()
 const HEADLESS = get(ENV, "CI", "") != "" || get(ENV, "HEADLESS", "") != ""
@@ -17,7 +17,7 @@ const wl = 512
 
 const ds = CachingStftPsd(A, wl, fs)
 
-@testset "SignalPlots" begin
+@testset "NeuroPlots" begin
 
     @testset "ts and spikes" begin
 
@@ -74,18 +74,18 @@ const ds = CachingStftPsd(A, wl, fs)
         ys = [(1, 2), (3, 4)]
         resx = [1, 1, 2, 2]
         resy = [1, 2, 3, 4]
-        @test SignalPlots.fill_points(xs, ys, true) == (resx, resy)
-        @test SignalPlots.fill_points(xs, ys, false) == ([1, 2], [1, 3])
+        @test NeuroPlots.fill_points(xs, ys, true) == (resx, resy)
+        @test NeuroPlots.fill_points(xs, ys, false) == ([1, 2], [1, 3])
         ax = Axis{MPL}(gca())
         try
-            lineartist = SignalPlots.make_dummy_line(ax)
-            rabase = SignalPlots.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
-            rabase = SignalPlots.RABaseInfo(ax, lineartist, (0, 1), (0.0, 1.0))
-            rp = SignalPlots.ResizeablePatch(dts, rabase)
-            rp = SignalPlots.ResizeablePatch(ax, dts, lineartist, (0.0, 1.0), (0.0, 1.0))
-            rs = SignalPlots.ResizeableSpec(ax, ds)
-            rs = SignalPlots.ResizeableSpec(ax, A, fs)
-            SignalPlots.axis_lim_changed(rp, ax)
+            lineartist = NeuroPlots.make_dummy_line(ax)
+            rabase = NeuroPlots.RABaseInfo(ax, lineartist, (0.0, 1.0), (0.0, 1.0))
+            rabase = NeuroPlots.RABaseInfo(ax, lineartist, (0, 1), (0.0, 1.0))
+            rp = NeuroPlots.ResizeablePatch(dts, rabase)
+            rp = NeuroPlots.ResizeablePatch(ax, dts, lineartist, (0.0, 1.0), (0.0, 1.0))
+            rs = NeuroPlots.ResizeableSpec(ax, ds)
+            rs = NeuroPlots.ResizeableSpec(ax, A, fs)
+            NeuroPlots.axis_lim_changed(rp, ax)
         finally
             plotclose()
         end

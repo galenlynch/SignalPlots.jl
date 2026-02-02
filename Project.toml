@@ -1,6 +1,6 @@
-name = "SignalPlots"
+name = "NeuroPlots"
 uuid = "1f2ffea9-73bd-5d04-b319-71eab08f4cf7"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["Galen Lynch <galen@galenlynch.com>"]
 
 [deps]

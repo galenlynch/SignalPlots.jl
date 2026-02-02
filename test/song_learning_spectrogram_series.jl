@@ -1,6 +1,6 @@
-using SignalPlots, WAV, PythonPlot, PythonCall
+using NeuroPlots, WAV, PythonPlot, PythonCall
 
-using SignalPlots: ResizeableArtist
+using NeuroPlots: ResizeableArtist
 
 datapath = "/home/glynch/Documents/Data/Screening/song_imitation"
 fnames = ["tutor.wav", "subsong.wav", "plastic_song.wav", "imitation.wav"]

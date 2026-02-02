@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = SignalPlots
+CurrentModule = NeuroPlots
 ```
 
-# SignalPlots
+# NeuroPlots
 
-Documentation for [SignalPlots](https://github.com/galenlynch/SignalPlots.jl).
+Documentation for [NeuroPlots](https://github.com/galenlynch/NeuroPlots.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [SignalPlots]
+Modules = [NeuroPlots]
 ```

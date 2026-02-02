@@ -1,4 +1,4 @@
-module SignalPlots
+module NeuroPlots
 
 using ArgCheck: ArgCheck, @argcheck
 using Distributed: Distributed, RemoteChannel, remote_do, workers
